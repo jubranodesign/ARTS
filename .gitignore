@@ -1,0 +1,36 @@
+# סביבות וירטואליות (חשוב מאוד!)
+venv/
+.venv/
+env/
+bin/
+lib/
+
+# קבצי הגדרות וסודות
+.env
+.flaskenv
+
+# קבצי פייתון זמניים
+__pycache__/
+*.py[cod]
+*$py.class
+
+# הפצות ובנייה
+build/
+dist/
+*.egg-info/
+
+# הגדרות של עורך הקוד (VS Code / PyCharm)
+.vscode/
+.idea/
+
+# קבצי מערכת (Mac/Windows)
+.DS_Store
+Thumbs.db
+
+
+# SQLite databases (checkpoints and vector metadata)
+*.sqlite
+*.sqlite3
+
+# Vector store data
+data/vector_store/
