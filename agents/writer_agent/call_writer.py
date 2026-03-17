@@ -5,7 +5,7 @@ from agents.writer_agent.prompts import WRITER_PROMPT_TEMPLATE
 from agents.writer_agent.tools import WRITER_TOOLS
 from graph.state import AgentState
 from shared.config import REPO_PATH, TEST_FRAMEWORK, MOCK_TOOL, setup_node_llm
-from utils.utils import count_test_cases_from_list, extract_python_path
+from utils.utils import count_test_cases_from_list, extract_python_path, get_test_path
 
 def call_writer(state: AgentState, config: RunnableConfig):
     # שליפת ההיסטוריה מה-State
@@ -29,9 +29,8 @@ def call_writer(state: AgentState, config: RunnableConfig):
 
     # 4. הכנת נתיבי עבודה (ה-Import והנתיב של הטסט)
     import_path = target_file.replace('/', '.').replace('.py', '')
-    folder = "/".join(target_file.split("/")[:-1])
-    filename = target_file.split("/")[-1]
-    test_file_path = f"tests/{folder}/test_{filename}" if folder else f"tests/test_{filename}"
+    test_file_path = get_test_path(target_file)
+    
     # חישוב מספר מקרי הבדיקה בתוכנית
     plan_text = state.get("test_plan", "")
     tc_count = count_test_cases_from_list(plan_text)
@@ -69,16 +68,27 @@ def call_writer(state: AgentState, config: RunnableConfig):
         # בדיקה אם אנחנו בסבב תיקון (Self-Healing)
 
         if state.get("test_run_status") == "failed":
-           instruction = (
-        f"STRICT ACTION REQUIRED: The previous test execution FAILED.\n"
+            instruction = (
+        f"🚨 STRICT ACTION REQUIRED: The previous test execution FAILED.\n"
         f"ERROR LOGS:\n{state.get('last_run_logs')}\n"
-        f"FILE TO FIX: {test_file_path}\n\n" # הנתיב היחסי
+        f"FILE TO FIX: {test_file_path}\n\n"
         f"STEP 1: Use `read_local_file` to read the current content of {test_file_path}.\n"
-        f"STEP 2: Analyze why it failed based on the logs.\n"
-        f"STEP 3: Fix the code and implement ALL {tc_count} cases correctly.\n"
-        f"STEP 4: Call `write_local_file` with the corrected code.\n"
-        f"DO NOT guess the code. Read it first."
+        f"STEP 2: Identify EXACTLY which test functions failed based on the logs.\n"
+        f"STEP 3: Instead of rewriting the entire file, use the `patch_test_code` tool.\n"
+        f"STEP 4: For each failed test, provide a SEARCH block (the old, broken code) "
+        f"and a REPLACE block (the fixed code with correct Mocks/Side-effects).\n"
+        f"⚠️ CRITICAL: Ensure the SEARCH block matches the file content EXACTLY, including spaces."
     )
+    #        instruction = (
+    #     f"STRICT ACTION REQUIRED: The previous test execution FAILED.\n"
+    #     f"ERROR LOGS:\n{state.get('last_run_logs')}\n"
+    #     f"FILE TO FIX: {test_file_path}\n\n" # הנתיב היחסי
+    #     f"STEP 1: Use `read_local_file` to read the current content of {test_file_path}.\n"
+    #     f"STEP 2: Analyze why it failed based on the logs.\n"
+    #     f"STEP 3: Fix the code and implement ALL {tc_count} cases correctly.\n"
+    #     f"STEP 4: Call `write_local_file` with the corrected code.\n"
+    #     f"DO NOT guess the code. Read it first."
+    # )
         else:
             # הוראת כתיבה רגילה (פעם ראשונה)
             # instruction = (

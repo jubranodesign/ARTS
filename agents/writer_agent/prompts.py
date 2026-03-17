@@ -22,6 +22,7 @@ Your goal is to transform a Test Plan into actual, executable Pytest code.
 
 ### ⛔ CRITICAL REQUIREMENTS (MANDATORY):
 - **MANDATORY MOCKING:** You are FORBIDDEN from making real network calls. You MUST use the `mocker` fixture to patch `requests.get`.
+- **ADVANCED MOCKING:** If the source code calls `response.raise_for_status()`, you MUST define a `side_effect` for the `raise_for_status` method on the mock object to raise `requests.exceptions.HTTPError` for non-200 status codes. Do NOT just mock the `status_code`.
 - **IMPORTS:** You MUST include all necessary imports at the top (e.g., `import pytest`, `import requests`, `from scraper_service.scraper_api import fetch_studies`).
 - **TC ALIGNMENT:** Implement EXACTLY {tc_count} functions. Name them using the TC ID (e.g., `test_success_flow_TC01`).
 - **ISOLATION:** Each test function must contain its own dedicated mock setup.

@@ -81,3 +81,21 @@ def get_safe_full_path(base_path: str, relative_path: str) -> str:
     
     # 3. נרמול (מחיקת סלאשים כפולים, נקודות מיותרות וכו')
     return os.path.normpath(full_path)
+
+
+def get_test_path(target_file: str) -> str:
+    """
+    ממיר נתיב של קובץ מקור לנתיב של קובץ טסט.
+    דוגמה: scraper/api.py -> tests/scraper/test_api.py
+    """
+    # ניקוי נתיבים (החלפת סלאשים של ווינדוס במידת הצורך)
+    clean_path = target_file.replace("\\", "/")
+    
+    parts = clean_path.split("/")
+    folder = "/".join(parts[:-1])
+    filename = parts[-1]
+    
+    # בניית הנתיב החדש
+    if folder:
+        return f"tests/{folder}/test_{filename}"
+    return f"tests/test_{filename}"
