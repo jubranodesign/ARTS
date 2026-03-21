@@ -15,6 +15,8 @@ class AgentState(TypedDict):
     architecture_summary: str  # שלב החוקר
 
     test_plan: str      
+
+    review_completed: bool
            # שלב המעצב
     target_file: str           # הנתיב לקובץ המקורי
  

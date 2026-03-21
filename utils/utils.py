@@ -99,3 +99,23 @@ def get_test_path(target_file: str) -> str:
     if folder:
         return f"tests/{folder}/test_{filename}"
     return f"tests/test_{filename}"
+
+
+import os
+
+def get_import_path(target_file: str) -> str:
+    """
+    Converts a file path (e.g., scraper_service/scraper_api.py) 
+    into a python import path (e.g., scraper_service.scraper_api).
+    """
+    if not target_file:
+        return ""
+        
+    # מסיר את הסיומת .py
+    path_without_ext = os.path.splitext(target_file)[0]
+    
+    # מחליף סלאשים (של כל המערכות) בנקודות
+    import_path = path_without_ext.replace("/", ".").replace("\\", ".")
+    
+    # ניקוי נקודות מיותרות בתחילת הנתיב אם קיימות
+    return import_path.strip(".")

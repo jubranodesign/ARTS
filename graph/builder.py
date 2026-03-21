@@ -88,15 +88,21 @@ workflow.add_edge("summarizer", "designer")
 workflow.add_edge("designer_tools", "update_investigated_files")
 workflow.add_edge("update_investigated_files", "designer")
 
+def route_after_cleaner(state: AgentState):
+    if state.get("review_completed"):
+        print("🔄 Cleaner -> Routing to WRITER")
+        return "to_writer"
+    print("🔄 Cleaner -> Routing to REVIEWER")
+    return "to_reviewer"
+    
 workflow.add_conditional_edges(
     "designer",
     should_continue,
     {
         "continue": "designer_tools",
-        "finish": "reviewer"
+        "finish": "final_cleaner_designer"
     }
 )
-
 
 workflow.add_conditional_edges(
     "reviewer",
@@ -107,8 +113,16 @@ workflow.add_conditional_edges(
     }
 )
 
+workflow.add_conditional_edges(
+    "final_cleaner_designer",
+    route_after_cleaner,
+    {
+        "to_reviewer": "reviewer",
+        "to_writer": "writer"
+    }
+)
+
 workflow.add_edge("reviewer_tools", "reviewer")
-workflow.add_edge("final_cleaner_designer", "writer")
 
 # 2. הוספת קצה מותנה (Conditional Edge) מהכותב
 # הוא יבדוק אם יש Tool Calls - אם כן ילך לכלים, אם לא יסיים

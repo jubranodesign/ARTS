@@ -61,6 +61,12 @@ def print_current_db_state(app, thread_id):
      test_plan = state.values.get("test_plan", [])
      print(f"📂 test_plan: {test_plan}")
 
+     review_completed = state.values.get("review_completed", [])
+     print(f"📂 review_completed: {review_completed}")
+
+     target_file = state.values.get("target_file", [])
+     print(f"📂 target_file: {target_file}")
+
      # הדפסת סיכום הארכיטקטורה
      summary = state.values.get("architecture_summary", "No summary found.")
      print(f"\n📝 Architecture Summary:\n{summary}")
