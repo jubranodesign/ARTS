@@ -4,7 +4,7 @@ from agents.researcher_agent.prompts import RESEARCHER_SYSTEM_PROMPT
 from agents.researcher_agent.tools import RESEARCHER_TOOLS
 from graph.state import AgentState
 from shared.config import setup_node_llm
-from utils.utils import extract_python_path, get_trimmed_messages
+from utils.utils import get_trimmed_messages
 
 # הצמדת הכלים למופע המשותף
 
@@ -12,9 +12,6 @@ def call_researcher(state: AgentState, config: RunnableConfig):
 
     llm = setup_node_llm(config, RESEARCHER_TOOLS)
 
-    user_input = state.get("user_input", "")
-    target_file = extract_python_path(user_input)
-    
     # 1. שליפת נתונים - אנחנו סומכים על ה-main שהזין HumanMessage
     current_summary = state.get("architecture_summary", "No summary available yet.")
     user_task = state.get("user_input", "No task defined.")
@@ -42,10 +39,7 @@ Current Architecture Knowledge: {current_summary}
     # 6. קריאה למודל
     try:
         response = llm.invoke(messages_to_send)
-        return {
-            "messages": [response],
-            "target_file": target_file, 
-            }
+        return {"messages": [response]}
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
         # הדפסת סדר ההודעות לדיבאג במקרה של שגיאת פורמט

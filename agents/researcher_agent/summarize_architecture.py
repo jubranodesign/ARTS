@@ -66,5 +66,6 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
 
     return {
         "architecture_summary": result.summary,
+        "target_file": target_file,
         "messages": delete_messages 
     }
