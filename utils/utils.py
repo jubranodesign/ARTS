@@ -12,6 +12,7 @@ from utils.paths import (
     get_test_path,
 )
 from utils.test_plan import count_test_cases_from_list
+from utils.testing import run_pytest
 
 __all__ = [
     "build_agent_messages",
@@ -22,4 +23,5 @@ __all__ = [
     "get_safe_full_path",
     "get_test_path",
     "get_trimmed_messages",
+    "run_pytest",
 ]
