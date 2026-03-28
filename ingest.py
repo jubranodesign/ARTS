@@ -2,42 +2,40 @@ import os
 from dotenv import load_dotenv
 
 # ייבוא השירותים שבנינו
+from services.document_factory import DocumentFactory
 from services.scanner import CodeScanner
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService
 from shared.config import REPO_PATH, VECTOR_STORE_PATH, get_embeddings_model
 
+
 def run_ingestion():
-    print("--- 🏁 The script has started! ---") # תוסיף את זה
-    # 1. טעינת משתני סביבה (API Key)
+    print("--- 🏁 The script has started! ---")
     load_dotenv()
     if not os.getenv("GOOGLE_API_KEY"):
         print("❌ Error: GOOGLE_API_KEY not found. Check your .env file.")
         return
 
-    
     print(f"🚀 Starting ingestion for: {REPO_PATH}")
 
-    # 3. אתחול מודל ה-Embedding (הזרקת תלויות)
-    # אנחנו משתמשים במודל 004 המעודכן של גוגל
     embeddings_model = get_embeddings_model()
 
-    # 4. אתחול השירותים
     scanner = CodeScanner()
+    factory = DocumentFactory()
     processor = CodeProcessor()
-    # מזריקים את ה-embeddings ל-DB Service
     db_service = VectorDBService(embeddings=embeddings_model)
 
     try:
-        # שלב א': סריקת הקבצים (מחזיר Documents)
-        raw_documents = scanner.scan(REPO_PATH)
-        if not raw_documents:
-            print("⚠️ No documents found to process. Exiting.")
-            return
+        file_paths, root_path = scanner.scan(REPO_PATH)
+        documents = []
+        for path in file_paths:
+            doc = factory.create_document(path, root_path)
+            if doc:
+                documents.append(doc)
 
         # שלב ב': חיתוך חכם (Splitting) לפי שפת Python
-        chunks = processor.process(raw_documents)
-
+        chunks = processor.process(documents)
+        print("chunks: ", chunks)
         # שלב ג': שמירה ל-ChromaDB (כאן נוצרת תיקיית data/vector_store)
         success = db_service.save_documents(chunks)
 
