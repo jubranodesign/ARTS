@@ -6,7 +6,7 @@ from services.document_factory import DocumentFactory
 from services.scanner import CodeScanner
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService
-from shared.config import REPO_PATH, VECTOR_STORE_PATH, get_embeddings_model
+from shared.config import REPO_PATH, VECTOR_STORE_PATH
 
 
 def run_ingestion():
@@ -18,12 +18,10 @@ def run_ingestion():
 
     print(f"🚀 Starting ingestion for: {REPO_PATH}")
 
-    embeddings_model = get_embeddings_model()
-
     scanner = CodeScanner()
     factory = DocumentFactory()
     processor = CodeProcessor()
-    db_service = VectorDBService(embeddings=embeddings_model)
+    db_service = VectorDBService()
 
     try:
         file_paths, root_path = scanner.scan(REPO_PATH)

@@ -8,6 +8,7 @@ from agents.designer_agent.call_reviewer import call_reviewer
 from agents.designer_agent.final_cleaner_designer import final_cleaner_designer
 from agents.designer_agent.update_investigated_files import update_investigated_files
 from agents.designer_agent.call_designer import call_designer
+from agents.executor_agent.save_test_node import save_test_node
 from agents.executor_agent.call_executor import call_executor
 from agents.researcher_agent.wait_for_task import wait_for_task
 from agents.designer_agent.tools import DESIGNER_TOOLS
@@ -41,6 +42,7 @@ workflow.add_node("writer", call_writer)
 workflow.add_node("writer_tools", ToolNode(DESIGNER_TOOLS + WRITER_TOOLS))
 workflow.add_node("final_cleaner_writer", final_cleaner_writer)
 workflow.add_node("executor", call_executor)
+workflow.add_node("save_successful_test", save_test_node)
 
 workflow.set_entry_point("wait_for_task")
 
@@ -114,9 +116,11 @@ workflow.add_conditional_edges(
     should_continue_after_test,
     {
         "fix_code": "writer",
-        "finish": END,
+        "finish": "save_successful_test",
     },
 )
+
+workflow.add_edge("save_successful_test", END)
 
 conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
 

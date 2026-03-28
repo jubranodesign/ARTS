@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 from graph.builder import app
+from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService # הייבוא של הגרף המקומפל מה-Builder
 from rich.console import Console
 from rich.markdown import Markdown
@@ -149,8 +150,9 @@ def run_test_system_stream():
     console = Console()
 
     vdb_instance = VectorDBService()
+    processor = CodeProcessor()
     thread_id = "test_invoke_session_001"
-    config = {"vdb": vdb_instance, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
+    config = {"vdb": vdb_instance, "processor": processor, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
 
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)
