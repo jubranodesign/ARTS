@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-test-system"
+version = "0.1.0"
+description = "Agentic test system (LangGraph)"
+requires-python = ">=3.10"
+dependencies = [
+    "langgraph>=0.2.70",
+    "langgraph-checkpoint-sqlite>=2.0.0",
+    "langchain-core>=0.3.45",
+    "langchain-google-genai>=2.0.0",
+    "langchain-groq>=0.2.0",
+    "langchain-huggingface>=0.1.0",
+    "transformers>=4.38.0",
+    "langchain-deepseek>=0.1.0",
+    "langchain-ollama>=0.2.0",
+    "langchain-openai>=0.2.0",
+    "langchain-mistralai>=0.2.0",
+    "langchain-chroma>=0.1.2",
+    "langchain-text-splitters>=0.3.0",
+    "pydantic>=2.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0",
+    "pytest>=8.0.0",
+    "pytest-mock>=3.10.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "langgraph-cli[inmem]>=0.1.61",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "agents*",
+    "graph*",
+    "shared*",
+    "services*",
+    "utils*",
+]
+namespaces = true

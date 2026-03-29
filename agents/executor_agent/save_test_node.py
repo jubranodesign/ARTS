@@ -1,14 +1,16 @@
 from pathlib import Path
 from langgraph.graph.state import RunnableConfig
 from graph.state import AgentState
+from services.code_processor import CodeProcessor
 from services.document_factory import DocumentFactory
+from services.vector_db_service import VectorDBService
 from shared.config import REPO_PATH
 
 
 def save_test_node(state: AgentState, config: RunnableConfig):
 
-    db_service =config.get("configurable", {}).get("vdb")
-    processor = config.get("configurable", {}).get("processor")
+    db_service =config.get("configurable", {}).get("vdb") or VectorDBService()
+    processor = config.get("configurable", {}).get("processor") or CodeProcessor()
 
     # 1. בדיקה שהטסט באמת עבר ב-State
     if state.get("test_run_status") != "passed":

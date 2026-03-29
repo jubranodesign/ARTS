@@ -134,3 +134,4 @@ atexit.register(cleanup)
 
 memory = SqliteSaver(conn)
 app = workflow.compile(checkpointer=memory, interrupt_before=["wait_for_task"])
+# app = workflow.compile(interrupt_before=["wait_for_task"])

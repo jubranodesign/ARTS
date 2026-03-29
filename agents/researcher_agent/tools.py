@@ -1,6 +1,8 @@
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 
+from services.vector_db_service import VectorDBService
+
 @tool
 def search_codebase(query: str, config: RunnableConfig) -> str:
    """
@@ -15,7 +17,7 @@ def search_codebase(query: str, config: RunnableConfig) -> str:
    """
    try:
         # שליפת המופע מהקונפיג
-        vdb = config.get("configurable", {}).get("vdb")
+        vdb = config.get("configurable", {}).get("vdb") or VectorDBService()
         # הקריאה פשוטה כי ה-Service כבר מחזיר מחרוזת מעובדת (Formatted String)
         return vdb.search_code(query)
         
