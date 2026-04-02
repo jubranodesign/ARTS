@@ -1,22 +1,37 @@
-# Runtime (aligned with pyproject.toml [project.dependencies])
+# --- Core Framework & Orchestration ---
 langgraph>=0.2.70
 langgraph-checkpoint-sqlite>=2.0.0
 langchain-core>=0.3.45
+
+# --- LLM Providers & Integrations ---
+langchain-openai>=0.2.0
 langchain-google-genai>=2.0.0
 langchain-groq>=0.2.0
 langchain-huggingface>=0.1.0
-transformers>=4.38.0
 langchain-deepseek>=0.1.0
 langchain-ollama>=0.2.0
-langchain-openai>=0.2.0
 langchain-mistralai>=0.2.0
+
+# --- Vector DB & Text Processing ---
 langchain-chroma>=0.1.2
 langchain-text-splitters>=0.3.0
+transformers>=4.38.0
+
+# --- Infrastructure & Utilities ---
 pydantic>=2.0
 python-dotenv>=1.0.0
 rich>=13.0
+
+# --- Testing ---
 pytest>=8.0.0
 pytest-mock>=3.10.0
 
-# LangGraph Studio / local dev server
+# --- LangGraph Studio / local dev server ---
 langgraph-cli[inmem]>=0.1.61
+
+# --- Database & Models (MISSING) ---
+sqlmodel>=0.0.22
+SQLAlchemy>=2.0.0
+
+# --- System Compatibility (Fixing previous gRPC errors) ---
+opentelemetry-exporter-otlp-proto-grpc==1.39.1

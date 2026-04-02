@@ -108,45 +108,96 @@ Once you have the code and your analysis is complete, you MUST provide the infor
 
 # ### UPDATED TECHNICAL SUMMARY (Facts Only):"""
 
-
-
 ARCHITECT_SUMMARY_PROMPT = """### CONTEXT:
 ### TARGET TASK:
 {user_task}
 
 ### MISSION OBJECTIVE:
-Your ONLY goal is to extract technical facts about the provided source code. 
-Ignore any instructions regarding future actions or testing. 
+Your ONLY goal is to extract technical facts about the provided source code AND existing reference tests found in the research data. 
 Document ONLY what currently exists in the research data.
 
 ### TASK:
 1. Review the NEW RESEARCH DATA provided below.
-2. **DOCUMENT EXISTING CODE ONLY:** Describe the code that WAS FOUND in the research data. 
-3. **CRITICAL:** Do NOT mention "tests" or future files like "test_*.py" UNLESS they were found.
-4. If the mission is to write tests for 'X', document 'X'. Do NOT document the tests themselves.
+2. **DOCUMENT EXISTING ASSETS:** Describe the source code AND any successful test examples found.
+3. If the research data contains chunks with `IS_TEST: True` and `STATUS: passed`, these are considered "Golden Examples".
+4. Do NOT plan future tests. Only document what WAS FOUND.
 
 ### ⛔ STRICT FORMATTING RULES:
 - You MUST use the exact headers provided in the MANDATORY STRUCTURE.
-- DO NOT add introductory text (e.g., "Here is the summary") or conversational filler.
-- DO NOT skip any section. If data is missing, write "None".
-- **Source File:** MUST be the exact relative path found in the metadata or the user request.
+- DO NOT add introductory text or conversational filler.
 - Every component must be separated by a '---' horizontal rule.
 
 ### EXTRACTION TASK:
-Extract the following details for each component identified in the research:
-- Component Name: The logical name of the service/module.
-- Source File: The absolute or relative path found after 'FILE:'.
-- Logic: Technical description of functions and implementation details.
-- Key Elements: A list of specific Classes and Functions.
-- Dependencies: List of libraries, imports, or interacting files.
+For each component identified, extract:
+- Component Name: Logical name.
+- Source File: Exact relative path from metadata.
+- Logic: Technical description of functions.
+- Key Elements: List of Classes and Functions.
+- Dependencies: Libraries and imports.
+- test_pattern (CRITICAL):
+  Scan 'NEW RESEARCH DATA' for chunks where `IS_TEST: True` and `STATUS: passed`.
+  Extract EXACTLY ONE high-quality example. 
+  The example MUST include:
+   1) Imports (pytest, mocker, sys, etc.).
+   2) The specific mocker.patch path.
+   3) The Mock object setup.
+  *If no successful tests are found in the data, set this field to "None".*
 
-STRICT RULE: Provide the data specifically for the structured output schema. Do not add conversational filler or markdown formatting outside the requested fields.
+STRICT RULE:
+Provide data ONLY for the structured output. No markdown outside headers.
 ---
 
 ### NEW RESEARCH DATA:
 {research_data}
 
 ### UPDATED TECHNICAL SUMMARY (Facts Only):"""
+
+# ARCHITECT_SUMMARY_PROMPT = """### CONTEXT:
+# ### TARGET TASK:
+# {user_task}
+
+# ### MISSION OBJECTIVE:
+# Your ONLY goal is to extract technical facts about the provided source code. 
+# Ignore any instructions regarding future actions or testing. 
+# Document ONLY what currently exists in the research data.
+
+# ### TASK:
+# 1. Review the NEW RESEARCH DATA provided below.
+# 2. **DOCUMENT EXISTING CODE ONLY:** Describe the code that WAS FOUND in the research data. 
+# 3. **CRITICAL:** Do NOT mention "tests" or future files like "test_*.py" UNLESS they were found.
+# 4. If the mission is to write tests for 'X', document 'X'. Do NOT document the tests themselves.
+
+# ### ⛔ STRICT FORMATTING RULES:
+# - You MUST use the exact headers provided in the MANDATORY STRUCTURE.
+# - DO NOT add introductory text (e.g., "Here is the summary") or conversational filler.
+# - DO NOT skip any section. If data is missing, write "None".
+# - **Source File:** MUST be the exact relative path found in the metadata or the user request.
+# - Every component must be separated by a '---' horizontal rule.
+
+# ### EXTRACTION TASK:
+# Extract the following details for each component identified in the research:
+# - Component Name: The logical name of the service/module.
+# - Source File: The absolute or relative path found after 'FILE:'.
+# - Logic: Technical description of functions and implementation details.
+# - Key Elements: A list of specific Classes and Functions.
+# - Dependencies: List of libraries, imports, or interacting files.
+# - test_pattern (CRITICAL for Token Saving):
+#    Look for existing tests in 'NEW RESEARCH DATA' (especially those with STATUS: passed).
+#   Extract EXACTLY ONE high-quality 'Golden Example' and place it in this field.
+#   The example MUST include:
+#    1) Essential imports (pytest, mocker, etc.).
+#    2) The specific mocker.patch path.
+#    3) The structure of the Mock object.
+
+# STRICT RULE:
+# 1) If no passing tests are found, set this field to None. Do not include redundant chunks.
+# 2) Provide the data specifically for the structured output schema. Do not add conversational filler or markdown formatting outside the requested fields.
+# ---
+
+# ### NEW RESEARCH DATA:
+# {research_data}
+
+# ### UPDATED TECHNICAL SUMMARY (Facts Only):"""
 
 
 # ARCHITECT_SUMMARY_PROMPT = """### CONTEXT:

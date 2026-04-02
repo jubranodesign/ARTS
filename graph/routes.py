@@ -27,9 +27,28 @@ def route_after_cleaner(state: AgentState):
     return "to_reviewer"
 
 
+# def should_continue_after_test(state: AgentState):
+#     if state["test_run_status"] == "passed":
+#         print("should_continue_after_test. passed")
+#         return "finish"
+#     print("should_continue_after_test. fix_code")
+#     return "fix_code"
+
 def should_continue_after_test(state: AgentState):
-    if state["test_run_status"] == "passed":
-        print("should_continue_after_test. passed")
+    # 1. אם הטסט עבר - מסיימים בהצלחה
+    if state.get("test_run_status") == "passed":
+        print("✅ should_continue_after_test: PASSED. Finishing workflow.")
         return "finish"
-    print("should_continue_after_test. fix_code")
+    
+    # 2. בדיקה כמה ניסיונות בוצעו עד כה
+    # (מוודאים שהערך קיים, אם לא - מתייחסים כ-0)
+    attempts = state.get("attempts", 0)
+    max_attempts = 3 # ניתן לשנות לפי הצורך
+    
+    if attempts >= max_attempts:
+        print(f"❌ should_continue_after_test: FAILED after {attempts} attempts. Stopping to prevent infinite loop.")
+        return "finish" # או return "give_up" אם יש לך node כזה
+    
+    # 3. אם נכשל ויש עוד ניסיונות - ממשיכים לתיקון
+    print(f"🔄 should_continue_after_test: FAILED. Attempt {attempts}/{max_attempts}. Routing to FIX_CODE.")
     return "fix_code"

@@ -8,9 +8,9 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     
     user_input: str
-
-    investigated_files: Annotated[list[str], operator.add]
-    
+    # investigated_files: set[str]
+#     investigated_files: Annotated[list[str], operator.add]
+    investigated_files: Annotated[set[str], operator.or_]
     # --- שדות הזיכרון (הסיכום המתגלגל) ---
     architecture_summary: str  # שלב החוקר
 
@@ -29,3 +29,7 @@ class AgentState(TypedDict):
     
     # # הלוג המלא של pytest (כדי שהמעצב יוכל לתקן אם נכשל)
     last_run_logs: str
+
+    test_chunks: str
+
+    attempts: int

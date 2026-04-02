@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -30,49 +30,88 @@ from pydantic import BaseModel, Field
 #     confidence_score: float = Field(description="Confidence score between 0 and 1")
 
 
+# class ArchitectureSnapshot(BaseModel):
+#     """
+#     סכימה משולבת: גם שדות טכניים מפורקים וגם סיכום מילולי של הקובץ.
+#     מבנה זה מונע שגיאות 400 ב-Groq כי הוא מגדיר ציפיות ברורות ל-LLM.
+#     """
+#     component_name: str = Field(
+#         description="The logical name of the module or service."
+#     )
+#     source_file: str = Field(
+#         description="The relative path to the source file analyzed."
+#     )
+#     file_summary: str = Field(
+#         description="A clear, high-level prose description of what this file does and its role in the system."
+#     )
+#     logic: str = Field(
+#         description="Technical details about how the functions/logic are implemented."
+#     )
+#     key_elements: List[str] = Field(
+#         description="A list of the main functions, classes, or constants identified."
+#     )
+#     dependencies: List[str] = Field(
+#         description="List of external and internal imports (e.g., requests, os, shared_utils)."
+#     )
+#     confidence_score: float = Field(
+#         description="Confidence level in this analysis (0.0 to 1.0)."
+#     )
+
+#     def to_summary_text(self) -> str:
+#         """Human-readable block for state['architecture_summary'] (Designer / Writer)."""
+#         key_el = (
+#             ", ".join(self.key_elements)
+#             if isinstance(self.key_elements, list)
+#             else self.key_elements
+#         )
+#         deps = (
+#             ", ".join(self.dependencies)
+#             if isinstance(self.dependencies, list)
+#             else self.dependencies
+#         )
+#         return f"""Component: {self.component_name}
+# File: {self.source_file}
+# General Description: {self.file_summary}
+# Technical Logic: {self.logic}
+# Key Elements: {key_el}
+# Dependencies: {deps}
+# """
+
+
 class ArchitectureSnapshot(BaseModel):
-    """
-    סכימה משולבת: גם שדות טכניים מפורקים וגם סיכום מילולי של הקובץ.
-    מבנה זה מונע שגיאות 400 ב-Groq כי הוא מגדיר ציפיות ברורות ל-LLM.
-    """
-    component_name: str = Field(
-        description="The logical name of the module or service."
+    # ... שאר השדות הקיימים שלך ...
+    component_name: str = Field(description="The logical name of the module or service.")
+    source_file: str = Field(description="The relative path to the source file analyzed.")
+    file_summary: str = Field(description="A clear, high-level prose description.")
+    logic: str = Field(description="Technical details about functions/logic.")
+    key_elements: List[str] = Field(description="Main functions, classes, or constants.")
+    dependencies: List[str] = Field(description="List of imports.")
+    
+    # השדה החדש והקריטי לחיסכון בטוקנים:
+    test_pattern: Optional[str] = Field(
+        default=None,
+        description="EXACTLY ONE high-quality 'Golden Example' of a passing test found in research. "
+                    "Includes essential imports and mocker.patch path. If no tests found, return None."
     )
-    source_file: str = Field(
-        description="The relative path to the source file analyzed."
-    )
-    file_summary: str = Field(
-        description="A clear, high-level prose description of what this file does and its role in the system."
-    )
-    logic: str = Field(
-        description="Technical details about how the functions/logic are implemented."
-    )
-    key_elements: List[str] = Field(
-        description="A list of the main functions, classes, or constants identified."
-    )
-    dependencies: List[str] = Field(
-        description="List of external and internal imports (e.g., requests, os, shared_utils)."
-    )
-    confidence_score: float = Field(
-        description="Confidence level in this analysis (0.0 to 1.0)."
-    )
+    
+    confidence_score: float = Field(description="Confidence level (0.0 to 1.0).")
 
     def to_summary_text(self) -> str:
-        """Human-readable block for state['architecture_summary'] (Designer / Writer)."""
-        key_el = (
-            ", ".join(self.key_elements)
-            if isinstance(self.key_elements, list)
-            else self.key_elements
-        )
-        deps = (
-            ", ".join(self.dependencies)
-            if isinstance(self.dependencies, list)
-            else self.dependencies
-        )
-        return f"""Component: {self.component_name}
+        # print("self.test_pattern: ", self.test_pattern)
+        """מעדכן את הייצוג הטקסטואלי שהכותב רואה"""
+        key_el = ", ".join(self.key_elements) if isinstance(self.key_elements, list) else self.key_elements
+        deps = ", ".join(self.dependencies) if isinstance(self.dependencies, list) else self.dependencies
+        
+        # בניית הבלוק הבסיסי
+        summary = f"""Component: {self.component_name}
 File: {self.source_file}
 General Description: {self.file_summary}
 Technical Logic: {self.logic}
 Key Elements: {key_el}
 Dependencies: {deps}
 """
+        # הוספת ה-Golden Example רק אם הוא קיים
+        if self.test_pattern and self.test_pattern.lower() != "none":
+            summary += f"\n--- REFERENCE TEST PATTERN (Golden Example) ---\n{self.test_pattern}\n"
+            
+        return summary

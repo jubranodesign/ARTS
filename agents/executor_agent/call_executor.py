@@ -6,7 +6,8 @@ from utils.paths import get_safe_full_path
 def call_executor(state: AgentState):
     # 1. שליפת הנתיב מה-State (שנשמר בשלב ה-Writer)
     test_file_path = state.get("test_file_path")
-    
+    current_attempts = state.get("attempts", 0)
+
     if not test_file_path:
         print("❌ Error: No test file path found in state.")
         return {"test_run_status": "failed", "last_run_logs": "No test file path provided."}
@@ -29,5 +30,6 @@ def call_executor(state: AgentState):
     # 4. עדכון ה-State
     return {
         "test_run_status": status,
-        "last_run_logs": logs
+        "last_run_logs": logs,
+        "attempts": current_attempts + 1 
     }

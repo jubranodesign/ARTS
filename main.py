@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from graph.builder import app
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService # הייבוא של הגרף המקומפל מה-Builder
@@ -53,6 +53,9 @@ def print_current_db_state(app, thread_id):
 
      messages = state.values.get("messages", [])
      print(f"📂 messages ({len(messages)}): {messages}")
+     
+     test_chunks = state.values.get("test_chunks", [])
+     print(f"📂 test_chunks ({len(test_chunks)}): {test_chunks}")
 
      # הדפסת רשימת הקבצים שנחקרו
      files = state.values.get("investigated_files", [])
@@ -152,7 +155,7 @@ def run_test_system_stream():
     vdb_instance = VectorDBService()
     processor = CodeProcessor()
     thread_id = "test_invoke_session_001"
-    config = {"vdb": vdb_instance, "processor": processor, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
+    config = {"vdb": vdb_instance, "processor": processor, "configurable": {"thread_id": thread_id, "model_provider": "mistral"}}
 
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)
@@ -330,5 +333,13 @@ def run_test_system():
 if __name__ == "__main__":
     #  run_test_system()
     run_test_system_stream()
-    # print_current_db_state(app,"test_invoke_session_001")
+
+    #  config = {"configurable": {"thread_id": "test_invoke_session_001"}}
+    #  messages = app.get_state(config).values["messages"]
+    #  app.update_state(config, {
+    #  "test_chunks": "",
+    #  "messages": [RemoveMessage(id=m.id) for m in messages]
+    # # "investigated_files": {"scraper_service/scraper_api.py"} 
+    #  })
+    #  print_current_db_state(app,"test_invoke_session_002")
     # print_summary_evolution(app,"test_invoke_session_001")
