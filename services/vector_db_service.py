@@ -58,10 +58,23 @@ class VectorDBService:
         docs = self.db.similarity_search(query, k=k)
         
         formatted_results = []
+        # for i, doc in enumerate(docs):
+        #     source = doc.metadata.get("relative_path", "Unknown")
+        #     formatted_results.append(f"--- RESULT {i+1} | FILE: {source} ---\n{doc.page_content}")
         for i, doc in enumerate(docs):
-            source = doc.metadata.get("relative_path", "Unknown")
-            formatted_results.append(f"--- RESULT {i+1} | FILE: {source} ---\n{doc.page_content}")
+          metadata = doc.metadata
+          source = metadata.get("relative_path", "Unknown")
         
+           # חילוץ המטא-דאטה החדש
+          is_test = metadata.get("is_test", False)
+          test_status = metadata.get("test_status", "N/A")
+          file_type = metadata.get("file_type", "code")
+
+           # בניית Header עשיר במידע
+          header = f"--- RESULT {i+1} | FILE: {source} | TYPE: {file_type} | IS_TEST: {is_test} | STATUS: {test_status} ---"
+        
+          formatted_results.append(f"{header}\n{doc.page_content}")
+
         return "\n\n".join(formatted_results)
 
     def clear_db(self):
