@@ -28,7 +28,7 @@ def extract_code_metrics(code_string):
         h_v = halstead_metrics.total.volume
         h_d = halstead_metrics.total.difficulty
         h_e = halstead_metrics.total.effort
-        h_b = halstead_metrics.total.bugs
+        # h_b = halstead_metrics.total.bugs
 
         return {
             'loc': loc,
@@ -36,7 +36,7 @@ def extract_code_metrics(code_string):
             'v': h_v,
             'd': h_d,
             'e': h_e,
-            'b': h_b,
+            # 'b': h_b,
             'defects': None  # זה מה שהמודל יחזה בהמשך
         }
     except Exception as error:
