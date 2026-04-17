@@ -35,3 +35,6 @@ Thumbs.db
 
 # Vector store data
 data/vector_store/
+
+# 
+models/
