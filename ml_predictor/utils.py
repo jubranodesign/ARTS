@@ -1,59 +1,134 @@
-import radon
 from radon.raw import analyze
-from radon.visitors import ComplexityVisitor
+from radon.complexity import cc_visit
 from radon.metrics import h_visit
 import os
 import pandas as pd
+import numpy as np
+import pickle
+from tabulate import tabulate
+
+# def extract_code_metrics(code_string):
+#     """
+#     מחלץ את המדדים המדויקים התואמים לאקסל של NASA:
+#     ['loc', 'v(g)', 'v', 'd', 'e', 'b']
+#     """
+#     try:
+#         # 1. חילוץ loc (נשתמש ב-lloc כי הוא הכי מדויק למדדי NASA)
+#         raw_metrics = analyze(code_string)
+#         loc = raw_metrics.lloc
+
+#         # 2. חילוץ v(g) - מורכבות ציקלומטית (ממוצע לקובץ)
+#         v = ComplexityVisitor.from_code(code_string)
+#         # אם יש פונקציות, ניקח ממוצע. אם הקובץ ריק, המורכבות היא 1.
+#         vg_list = [obj.complexity for obj in v.functions + v.classes]
+#         vg = sum(vg_list) / len(vg_list) if vg_list else 1
+
+#         # 3. חילוץ מדדי Halstead (v, d, e, b)
+#         halstead_metrics = h_visit(code_string)
+#         # אנחנו לוקחים את המדדים הכוללים (total) של הקובץ
+#         h_v = halstead_metrics.total.volume
+#         h_d = halstead_metrics.total.difficulty
+#         h_e = halstead_metrics.total.effort
+#         # h_b = halstead_metrics.total.bugs
+
+#         return {
+#             'loc': loc,
+#             'v(g)': vg,
+#             'v': h_v,
+#             'd': h_d,
+#             'e': h_e,
+#             # 'b': h_b,
+#             'defects': None  # זה מה שהמודל יחזה בהמשך
+#         }
+#     except Exception as error:
+#         print(f"Error analyzing code: {error}")
+#         return None
+
+# משתנים גלובליים לטעינה חד-פעמית
+_model = None
+_scaler = None
+
+def load_ml_assets():
+    global _model, _scaler
+    if _model is None or _scaler is None:
+        model_path = os.path.join(os.path.dirname(__file__), 'bug_prediction_model.pkl')
+        scaler_path = os.path.join(os.path.dirname(__file__), 'scaler.pkl')
+        
+        with open(model_path, 'rb') as f:
+            _model = pickle.load(f)
+        with open(scaler_path, 'rb') as f:
+            _scaler = pickle.load(f)
+    return _model, _scaler
 
 
 def extract_code_metrics(code_string):
-    """
-    מחלץ את המדדים המדויקים התואמים לאקסל של NASA:
-    ['loc', 'v(g)', 'v', 'd', 'e', 'b']
-    """
     try:
-        # 1. חילוץ loc (נשתמש ב-lloc כי הוא הכי מדויק למדדי NASA)
+        # 1. חילוץ מדדים בסיסיים
         raw_metrics = analyze(code_string)
-        loc = raw_metrics.lloc
+        loc = raw_metrics.lloc 
 
-        # 2. חילוץ v(g) - מורכבות ציקלומטית (ממוצע לקובץ)
-        v = ComplexityVisitor.from_code(code_string)
-        # אם יש פונקציות, ניקח ממוצע. אם הקובץ ריק, המורכבות היא 1.
-        vg_list = [obj.complexity for obj in v.functions + v.classes]
+        v_visitor = cc_visit(code_string)
+        vg_list = [obj.complexity for obj in v_visitor]
         vg = sum(vg_list) / len(vg_list) if vg_list else 1
 
-        # 3. חילוץ מדדי Halstead (v, d, e, b)
-        halstead_metrics = h_visit(code_string)
-        # אנחנו לוקחים את המדדים הכוללים (total) של הקובץ
-        h_v = halstead_metrics.total.volume
-        h_d = halstead_metrics.total.difficulty
-        h_e = halstead_metrics.total.effort
-        # h_b = halstead_metrics.total.bugs
+        halstead = h_visit(code_string)
+        v = halstead.total.volume
+        d = halstead.total.difficulty
+        e = halstead.total.effort
 
-        return {
-            'loc': loc,
-            'v(g)': vg,
-            'v': h_v,
-            'd': h_d,
-            'e': h_e,
-            # 'b': h_b,
-            'defects': None  # זה מה שהמודל יחזה בהמשך
-        }
+        # 2. Feature Engineering (חובה - לפי ה-Notebook שלך)
+        complexity_density = vg / max(loc, 1)
+        volume_per_line = v / max(loc, 1)
+
+        # 3. בניית ה-DataFrame בסדר המדויק של התמונה
+        columns = ['loc', 'v(g)', 'v', 'd', 'e', 'complexity_density', 'volume_per_line']
+        data = [[loc, vg, v, d, e, complexity_density, volume_per_line]]
+        
+        df = pd.DataFrame(data, columns=columns)
+
+        # 4. ניקוי נתונים
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        df.fillna(0, inplace=True)
+        
+        if not df.empty:
+            # יצירת הטבלה כמחרוזת
+            table_output = tabulate(df, headers='keys', tablefmt='psql', showindex=False)
+            # הדפסה אקטיבית לטרמינל
+            print("\n--- Feature Breakdown ---")
+            print(table_output)
+            print("-------------------------\n")
+        else:
+            print("--- Warning: DataFrame is empty, nothing to print ---")
+
+        return df
+
     except Exception as error:
-        print(f"Error analyzing code: {error}")
+        print(f"Error in metric extraction: {error}")
         return None
 
-# --- דוגמה לשימוש ---
-# example_code = """
-# def calculate_sum(a, b):
-#     if a > b:
-#         return a + b
-#     else:
-#         return b - a
-# """
 
-# metrics = extract_code_metrics(example_code)
-# print(metrics)
+def predict_risk(file_content):
+    model, scaler = load_ml_assets()
+    features_df = extract_code_metrics(file_content)
+    scaled_features = scaler.transform(features_df)
+
+    probability = model.predict_proba(scaled_features)[:, 1][0]
+
+    # חילוץ חשיבות המשתנים הגלובלית מהמודל
+    importances = model.feature_importances_
+    feature_names = features_df.columns
+    
+    # יצירת מילון של המשתנים והערכים שלהם לקובץ הספציפי הזה
+    # זה יעזור לסוכן להגיד: "זיהיתי סיכון בגלל שערך ה-LOC הוא X"
+    explanation = {
+        name: {"importance": float(imp), "value": float(val)}
+        for name, imp, val in zip(feature_names, importances, features_df.values[0])
+    }
+    
+    # מיון לפי החשיבות הכי גבוהה (ה-Top 3 שגרמו להחלטה)
+    top_reasons = sorted(explanation.items(), key=lambda x: x[1]['importance'], reverse=True)[:3]
+
+    return float(probability), top_reasons
 
 
 def scan_repo_to_excel(repo_path, output_file='my_repo_metrics.csv'):

@@ -169,7 +169,9 @@ def run_test_system_stream():
         "messages": [HumanMessage(content=user_task)],
         # אנחנו מאתחלים את הסטטוס ל-pending כדי שה-Writer ידע שזה סבב ראשון
         "test_run_status": "pending"
-    }, as_node="wait_for_task")
+    },
+    #  as_node="wait_for_task"
+     )
 
     console.print(f"🔍 [bold yellow]Analyzing project for task:[/bold yellow] '{user_task}'...\n")
 
@@ -341,5 +343,5 @@ if __name__ == "__main__":
     #  "messages": [RemoveMessage(id=m.id) for m in messages]
     # # "investigated_files": {"scraper_service/scraper_api.py"} 
     #  })
-    #  print_current_db_state(app,"test_invoke_session_002")
+    #  print_current_db_state(app,"test_invoke_session_003")
     # print_summary_evolution(app,"test_invoke_session_001")

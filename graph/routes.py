@@ -5,10 +5,27 @@ from langgraph.graph import END
 from graph.state import AgentState
 
 
+# def route_after_input(state: AgentState):
+#     if state.get("user_input"):
+#         return "researcher"
+#     return END
+
 def route_after_input(state: AgentState):
-    if state.get("user_input"):
+    user_input = state.get("user_input")
+    risk_score = state.get("risk_score", 0)
+
+    # אם היוזר לא כתב כלום - עוצרים בכל מקרה
+    if not user_input or not user_input.strip():
+        return END
+
+    # כאן נכנס המודל שלך לפעולה (אחרי שיש בקשה מהיוזר):
+    if risk_score >= 0.2:
+        print(f"--- Risk high ({risk_score:.2f}). Forwarding to researcher. ---")
         return "researcher"
-    return END
+    
+    # אם היוזר ביקש אבל המודל אומר שהקוד בטוח (מתחת ל-0.2)
+    print(f"--- Risk low ({risk_score:.2f}). Skipping deep research. ---")
+    return END # או שאתה יכול להחליט לשלוח למסלול 'קל' יותר
 
 
 def should_continue(state: AgentState):

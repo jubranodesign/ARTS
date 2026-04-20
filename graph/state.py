@@ -33,3 +33,7 @@ class AgentState(TypedDict):
     test_chunks: str
 
     attempts: int
+
+    risk_score: float
+
+    risk_reasons: list[dict] 

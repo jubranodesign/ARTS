@@ -397,4 +397,38 @@ with open('bug_prediction_model.pkl', 'wb') as f:
 with open('scaler.pkl', 'wb') as f:
     pickle.dump(scaler, f)
 
+# %% [markdown]
+# ## 10.1 Confusion Matrix Visualization
+
+# %%
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+
+# חישוב המטריצה
+cm = confusion_matrix(y_test, rf_final_preds)
+
+# ויזואליזציה
+plt.figure(figsize=(8, 6))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+            xticklabels=['Predicted: No Bug', 'Predicted: Bug'],
+            yticklabels=['Actual: No Bug', 'Actual: Bug'])
+
+plt.title(f'Confusion Matrix (Threshold: {custom_threshold})')
+plt.ylabel('Actual Label')
+plt.xlabel('Predicted Label')
+plt.show()
+
+# %% [markdown]
+# ## 10.2 Results Interpretation
+# 
+# Based on the confusion matrix, we can analyze the model's performance and its impact on our autonomous agent's workflow:
+# 
+# * **True Positives (295):** The model successfully detected **295 out of 421** actual bugs. This reflects a **~70% Recall**, ensuring that the majority of defective code will be flagged for the testing agent.
+# * **True Negatives (1048):** The model correctly identified **1048 clean files**. This is a critical efficiency gain; the agent will **skip** these files, saving over 50% in LLM token costs and processing time.
+# * **False Positives (708):** These are files flagged as "Buggy" that were actually clean. While this introduces some "noise," it is a **deliberate engineering trade-off**. In the context of software quality, the cost of a False Positive (generating an unnecessary test) is significantly lower than the risk of a False Negative (missing a production bug).
+# * **False Negatives (126):** These represent the 30% of bugs that the model missed. These cases are typically subtle logic errors that do not manifest in code metrics (Radon), and will be handled by the agent's secondary semantic analysis layer.
+# 
+# > **Key Takeaway:** The model acts as an effective "Risk Filter," reducing the agent's workload from 2,177 files down to 1,003, while maintaining a strong safety net for the most complex parts of the codebase.
+
 
