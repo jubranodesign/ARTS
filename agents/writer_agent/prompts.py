@@ -11,6 +11,7 @@ Your goal is to transform the provided Approved Test Plan into executable Pytest
 - Destination Path: {test_file_path}
 - Test Framework: pytest
 - Mocking Tool: {mock_tool} (mocker fixture)
+- Risk Context: {architecture_summary} (Focus on the 'Risk Profile' to understand identified logic gaps)
 
 ### 📚 KNOWLEDGE BASE:
 #### 💡 REFERENCE MOCK PATTERN:
@@ -22,6 +23,7 @@ NOTE: This is an example of STYLE only.
    - If the code does NOT catch an exception, the test MUST expect it to raise. 
    - If the code does NOT explicitly call a method (like `rollback()`), DO NOT assert it.
    - DO NOT invent behavior (like timeouts or retries) if they aren't in the source.
+   - **RISK ALIGNMENT**: Your code must mitigate risks noted in the 'Risk Profile'. For example, if the risk is 'missing timeouts', your mocks should simulate how the code behaves during a timeout.
 2. **STRICT ALIGNMENT**: Implement EXACTLY {tc_count} test cases. 
 3. **NO REASONING**: Just generate the code. Do not explain.
 4. **NO FIXTURES**: Put all mocks and logic inside each test function.
@@ -46,6 +48,7 @@ NOTE: This is an example of STYLE only.
 
 ⛔ **CRISTICALLY REALISTIC ASSERTIONS**:
 - Read the source: If there is no `try-except` around a block, do not write a test that expects the app to handle that error gracefully.
+- Align assertions with Risk Profile: If the risk is "high complexity", use robust assertions to verify data integrity.
 - Name functions: `test_tc001_...` exactly as in the plan.
 
 APPROVED TEST PLAN:

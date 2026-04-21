@@ -28,6 +28,8 @@ def call_writer(state: AgentState, config: RunnableConfig):
     summary_text = state.get("architecture_summary", "")
     parsed_summary = parse_architecture_summary(summary_text)
     golden_example = parsed_summary.get("golden_example", "No reference pattern found.")
+    architecture_summary = state.get("architecture_summary", "No summary available")
+
     print("call_writer golden_example: ", golden_example)
     
     # 4. בניית ה-System Message (ה-Prompt המלא)
@@ -40,7 +42,8 @@ def call_writer(state: AgentState, config: RunnableConfig):
         mock_tool=MOCK_TOOL,
         import_path=import_path,
         tc_count=tc_count,
-        golden_example=golden_example
+        golden_example=golden_example,
+         architecture_summary=architecture_summary
     )
     system_msg = SystemMessage(content=full_prompt + f"\n\nCRITICAL: Implement ALL {tc_count} cases identified.")
 

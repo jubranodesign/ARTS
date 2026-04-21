@@ -25,7 +25,7 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     # print(f" summarize_architecture only_tests_data: {test_chunks}")
 
     raw_research = extract_message_by_content(all_messages, "### RESEARCH_DATA_DUMP ###")
-    # print(f" summarize_architecture raw_research: {raw_research}")
+    print(f" summarize_architecture raw_research: {raw_research}")
 
     if not raw_research:
         print("❌ Critical Error: No '### RESEARCH_DATA_DUMP ###' found in Researcher history.")

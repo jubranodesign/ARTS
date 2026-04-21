@@ -4,6 +4,7 @@ from agents.researcher_agent.prompts import RESEARCHER_SYSTEM_PROMPT
 from agents.researcher_agent.tools import RESEARCHER_TOOLS
 from graph.state import AgentState
 from shared.config import setup_node_llm
+from utils.state import format_risk_context
 from utils.utils import get_trimmed_messages
 
 # הצמדת הכלים למופע המשותף
@@ -16,14 +17,27 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     current_summary = state.get("architecture_summary", "No summary available yet.")
     user_task = state.get("user_input", "No task defined.")
     all_messages = state.get("messages", [])
-
+    
+    risk_context = format_risk_context(state)
+    print("risk_context ", risk_context)
     # 2. בניית ה-System Message המעודכן
     # ה-user_task נשאר כאן כי הוא קריטי להנחיית המודל בכל סיבוב
-    instruction_content = f"""{RESEARCHER_SYSTEM_PROMPT}
+    instruction_content = f"""
+    {RESEARCHER_SYSTEM_PROMPT}
 
-Target Task: {user_task}
-Current Architecture Knowledge: {current_summary}
-"""
+    {risk_context}
+
+    ### TARGET TASK:
+    {user_task}
+
+    ### CURRENT ARCHITECTURE KNOWLEDGE:
+    {current_summary}
+
+    ### EXECUTION GUIDANCE:
+    Focus your 'search_codebase' and analysis on the logic related to the identified risk factors above. 
+    Your data dump must explain how the code implementation contributes to these statistical risks.
+    """
+
     system_msg = SystemMessage(content=instruction_content)
 
     # 3. סינון היסטוריה - משאירים רק Human, AI ו-Tool

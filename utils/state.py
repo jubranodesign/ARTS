@@ -41,3 +41,27 @@ def parse_architecture_summary(summary_text: str) -> dict:
             parsed_data[key] = None
             
     return parsed_data
+
+
+def format_risk_context(state: dict) -> str:
+    """
+    הופכת את נתוני ה-ML מה-State לטקסט הנחיה קריא עבור הסוכנים.
+    """
+    score = state.get("risk_score", 0)
+    reasons = state.get("risk_reasons", [])
+    
+    if not reasons:
+        return "ML RISK ANALYSIS: No specific risk factors identified."
+
+    # קביעת רמת הסיכון מילולית
+    risk_level = "HIGH" if score >= 0.2 else "LOW"
+    
+    header = f"🚨 ML RISK ANALYSIS: Score {score:.2f} ({risk_level} RISK)\n"
+    factors = "Top Risk Factors to investigate:\n"
+    
+    details = "\n".join([
+        f"- {r['feature'].upper()}: Impact {r['impact']:.2f} (Current Value: {r['value']})" 
+        for r in reasons
+    ])
+    
+    return f"{header}{factors}{details}\n"

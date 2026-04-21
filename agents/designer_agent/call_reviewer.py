@@ -12,11 +12,13 @@ def call_reviewer(state, config):
     target_file = state.get("target_file")
     import_path = get_import_path(target_file)
     test_plan = state.get("test_plan", "No draft found in state")
+    architecture_summary = state.get("architecture_summary", "No summary available")
 
     # 3. הכנת הפרומפט (הזרקת המשתנים ל-System)
     system_content = REVIEWER_PROMPT_TEMPLATE.format(
         target_file=target_file,
-        import_path=import_path
+        import_path=import_path,
+        architecture_summary=architecture_summary
     )
     system_message = SystemMessage(content=system_content)
     

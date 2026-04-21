@@ -51,13 +51,22 @@ _scaler = None
 def load_ml_assets():
     global _model, _scaler
     if _model is None or _scaler is None:
-        model_path = os.path.join(os.path.dirname(__file__), 'bug_prediction_model.pkl')
-        scaler_path = os.path.join(os.path.dirname(__file__), 'scaler.pkl')
+        # מקבלים את תיקיית השורש של הפרויקט (איפה שיושב הקובץ הנוכחי)
+        base_dir = os.path.dirname(__file__)
         
+        # בונים נתיב מדויק לתיקיית המודלים
+        model_path = os.path.join(base_dir, 'models', 'random_forest', 'bug_prediction_model.pkl')
+        scaler_path = os.path.join(base_dir, 'models', 'random_forest', 'scaler.pkl')
+        
+        # בדיקת בטיחות (Senior Move): וודא שהקובץ קיים לפני הפתיחה
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found at: {model_path}")
+
         with open(model_path, 'rb') as f:
             _model = pickle.load(f)
         with open(scaler_path, 'rb') as f:
             _scaler = pickle.load(f)
+            
     return _model, _scaler
 
 

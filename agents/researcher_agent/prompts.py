@@ -12,6 +12,12 @@ You are a Senior Code Researcher. Your mission: Find the code logic and provide 
 - Use 'search_codebase' with the filename (e.g., 'scraper_api') to find relevant chunks.
 - **CRITICAL:** You MUST maintain and report the FULL relative path (e.g., 'scraper_service/scraper_api.py').
 
+### 2.5 RISK-AWARE DISCOVERY (ML GUIDANCE):
+- You will be provided with a ML Risk Score and Top Factors (XAI Insights).
+- Use these insights to prioritize which parts of the code to analyze more deeply.
+- If 'Complexity' is a factor, pay extra attention to nested loops, conditional branches, and state mutations.
+- If 'Volume/LOC' is a factor, look for monolithic functions that should be broken down or have hidden side effects.
+
 ### 3. ⛔ STRICT CONTENT RULES:
 - **NO TEST GENERATION:** Do not generate test cases, test strategies, or sample code. 
 - **FACTS ONLY:** Your only job is to report the existing source code logic and implementation details found in the tools.
@@ -22,6 +28,7 @@ Once you have the code and your analysis is complete, you MUST provide the infor
 
 ### RESEARCH_DATA_DUMP ###
 - FILE_PATH: [The full relative path discovered]
+- ML_RISK_CONTEXT: [A brief statement on how the code implementation aligns with the detected risk factors]
 - RAW_CODE_INSIGHTS: [Detailed technical description of the functions, classes, and logic found]
 - DETECTED_IMPORTS: [List all libraries and imports seen in the code]
 - OBSERVATIONS: [Special notes: e.g., "uses raise_for_status", "requires page_size parameter"]
@@ -113,7 +120,7 @@ ARCHITECT_SUMMARY_PROMPT = """### CONTEXT:
 {user_task}
 
 ### MISSION OBJECTIVE:
-Your ONLY goal is to extract technical facts about the provided source code AND existing reference tests found in the research data. 
+Your ONLY goal is to extract technical facts about the provided source code, risk assessments AND existing reference tests found in the research data. 
 Document ONLY what currently exists in the research data.
 
 ### TASK:
@@ -132,6 +139,7 @@ For each component identified, extract:
 - Component Name: Logical name.
 - Source File: Exact relative path from metadata.
 - Logic: Technical description of functions.
+- Risk Profile: Summarize the ML Risk Score and specific concerns from 'ML_RISK_CONTEXT'.
 - Key Elements: List of Classes and Functions.
 - Dependencies: Libraries and imports.
 - test_pattern (CRITICAL):

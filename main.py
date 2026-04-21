@@ -155,7 +155,7 @@ def run_test_system_stream():
     vdb_instance = VectorDBService()
     processor = CodeProcessor()
     thread_id = "test_invoke_session_001"
-    config = {"vdb": vdb_instance, "processor": processor, "configurable": {"thread_id": thread_id, "model_provider": "mistral"}}
+    config = {"vdb": vdb_instance, "processor": processor, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
 
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)

@@ -84,9 +84,14 @@ class ArchitectureSnapshot(BaseModel):
     source_file: str = Field(description="The relative path to the source file analyzed.")
     file_summary: str = Field(description="A clear, high-level prose description.")
     logic: str = Field(description="Technical details about functions/logic.")
+    risk_profile: str = Field(
+        default="Not Analyzed", 
+        description="Summary of ML Risk score and specific architectural concerns found."
+    )
     key_elements: List[str] = Field(description="Main functions, classes, or constants.")
     dependencies: List[str] = Field(description="List of imports.")
-    
+   
+
     # השדה החדש והקריטי לחיסכון בטוקנים:
     test_pattern: Optional[str] = Field(
         default=None,
@@ -107,6 +112,7 @@ class ArchitectureSnapshot(BaseModel):
 File: {self.source_file}
 General Description: {self.file_summary}
 Technical Logic: {self.logic}
+Risk Profile: {self.risk_profile}
 Key Elements: {key_el}
 Dependencies: {deps}
 """

@@ -32,9 +32,9 @@ def wait_for_task(state: AgentState):
         })
 
     # הדפסה למשתמש (אופציונלי, כדי שיראה בזמן אמת)
-    print("\n[AI Risk Analysis] Top Factors:")
-    for r in reasons_for_state:
-        print(f" - {r['feature']}: Impact {r['impact']:.2f}, Value: {r['value']}")
+    # print("\n[AI Risk Analysis] Top Factors:")
+    # for r in reasons_for_state:
+    #     print(f" - {r['feature']}: Impact {r['impact']:.2f}, Value: {r['value']}")
 
     # new_input = input("\nYour task? (Enter to use AI Risk Assessment): ")
 
