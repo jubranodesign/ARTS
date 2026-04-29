@@ -1,6 +1,6 @@
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langgraph.graph.state import RunnableConfig
-from agents.designer_agent.tools import DESIGNER_TOOLS
+from agents.shared.agent_tools import AGENT_TOOLS
 from agents.writer_agent.prompts import WRITER_PROMPT_TEMPLATE
 from agents.writer_agent.tools import WRITER_TOOLS
 from graph.state import AgentState
@@ -17,7 +17,7 @@ def call_writer(state: AgentState, config: RunnableConfig):
             return {"messages": [AIMessage(content="Test file has been saved successfully. Task complete.")]}
 
     # 2. הגדרת ה-LLM (לפי ההמלצה: Qwen-2.5-32b לביצוע מדויק של Mocks)
-    llm = setup_node_llm(config, DESIGNER_TOOLS + WRITER_TOOLS) 
+    llm = setup_node_llm(config, AGENT_TOOLS + WRITER_TOOLS) 
     
     # 3. חילוץ נתונים
     target_file = state.get("target_file")

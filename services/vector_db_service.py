@@ -49,13 +49,13 @@ class VectorDBService:
             print(f"❌ Error adding documents: {e}")
             return False
 
-    def search_code(self, query: str, k: int = 5) -> str:
+    def search_code(self, query: str, k: int = 5, filter_dict: dict = None) -> str:
         """חיפוש סמנטי דרך המופע הקיים"""
         # בדיקה אם ה-DB מכיל נתונים (אופציונלי)
         if self.db._collection.count() == 0:
             return "🔍 Database is currently empty."
 
-        docs = self.db.similarity_search(query, k=k)
+        docs = self.db.similarity_search(query, k=k, filter=filter_dict)
         
         formatted_results = []
         # for i, doc in enumerate(docs):
@@ -74,7 +74,8 @@ class VectorDBService:
           header = f"--- RESULT {i+1} | FILE: {source} | TYPE: {file_type} | IS_TEST: {is_test} | STATUS: {test_status} ---"
         
           formatted_results.append(f"{header}\n{doc.page_content}")
-
+        print("search_code formatted_results: ")
+        print("\n\n".join(formatted_results))
         return "\n\n".join(formatted_results)
 
     def clear_db(self):

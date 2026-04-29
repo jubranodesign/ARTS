@@ -1,7 +1,7 @@
 from langchain_core.messages import SystemMessage
 from langgraph.graph.state import RunnableConfig
 from agents.designer_agent.prompts import DESIGNER_PROMPT_TEMPLATE
-from agents.designer_agent.tools import DESIGNER_TOOLS
+from agents.shared.agent_tools import AGENT_TOOLS
 from graph.state import AgentState
 from shared.config import setup_node_llm
 from utils.utils import build_agent_messages
@@ -9,7 +9,7 @@ from utils.utils import build_agent_messages
 
 def call_designer(state: AgentState, config: RunnableConfig):
     # 1. הגדרת ה-LLM (לפי ההמלצה: Qwen-2.5-32b או Gemini)
-    llm = setup_node_llm(config, DESIGNER_TOOLS)
+    llm = setup_node_llm(config, AGENT_TOOLS)
 
     # 2. שליפת נתונים בסיסיים מה-State
     architecture_summary = state.get("architecture_summary", "No summary available")

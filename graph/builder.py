@@ -11,7 +11,7 @@ from agents.designer_agent.call_designer import call_designer
 from agents.executor_agent.save_test_node import save_test_node
 from agents.executor_agent.call_executor import call_executor
 from agents.researcher_agent.wait_for_task import wait_for_task
-from agents.designer_agent.tools import DESIGNER_TOOLS
+from agents.shared.agent_tools import AGENT_TOOLS
 from agents.writer_agent.final_cleaner_writer import final_cleaner_writer
 from agents.writer_agent.call_writer import call_writer
 from agents.writer_agent.tools import WRITER_TOOLS
@@ -33,13 +33,13 @@ workflow.add_node("researcher", call_researcher)
 workflow.add_node("researcher_tools", ToolNode(RESEARCHER_TOOLS))
 workflow.add_node("summarizer", summarize_architecture)
 workflow.add_node("designer", call_designer)
-workflow.add_node("designer_tools", ToolNode(DESIGNER_TOOLS))
+workflow.add_node("designer_tools", ToolNode(AGENT_TOOLS))
 workflow.add_node("update_investigated_files", update_investigated_files)
 workflow.add_node("reviewer", call_reviewer)
-workflow.add_node("reviewer_tools", ToolNode(DESIGNER_TOOLS))
+workflow.add_node("reviewer_tools", ToolNode(AGENT_TOOLS))
 workflow.add_node("final_cleaner_designer", final_cleaner_designer)
 workflow.add_node("writer", call_writer)
-workflow.add_node("writer_tools", ToolNode(DESIGNER_TOOLS + WRITER_TOOLS))
+workflow.add_node("writer_tools", ToolNode(AGENT_TOOLS + WRITER_TOOLS))
 workflow.add_node("final_cleaner_writer", final_cleaner_writer)
 workflow.add_node("executor", call_executor)
 workflow.add_node("save_successful_test", save_test_node)

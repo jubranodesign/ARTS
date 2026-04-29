@@ -22,10 +22,13 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     target_file = extract_python_path(user_task)
     
     test_chunks = get_all_processed_tool_data(all_messages, filter_func=filter_only_successful_tests)
-    # print(f" summarize_architecture only_tests_data: {test_chunks}")
+    
+    if not test_chunks.strip():
+          print("No successful reference tests discovered in vector store.")
+
 
     raw_research = extract_message_by_content(all_messages, "### RESEARCH_DATA_DUMP ###")
-    print(f" summarize_architecture raw_research: {raw_research}")
+    # print(f" summarize_architecture raw_research: {raw_research}")
 
     if not raw_research:
         print("❌ Critical Error: No '### RESEARCH_DATA_DUMP ###' found in Researcher history.")
@@ -35,7 +38,7 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     clean_research = get_clean_text(raw_research)
     # print(f" summarize_architecture clean_research: {clean_research}")
 
-    combined_research = f"--- SOURCE CODE ---\n{clean_research}\n\n--- REFERENCE TEST CHUNKS ---\n{test_chunks}"
+    combined_research = f"---  RESEARCH_DATA_DUMP ---\n{clean_research}\n\n--- REFERENCE TEST CHUNKS ---\n{test_chunks}"
     print(f" summarize_architecture combined_research: {combined_research}")
 
     
@@ -69,4 +72,4 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
 
     except Exception as e:
         print(f"❌ Error during structured invoke: {e}")
-        return {}
+        raise e

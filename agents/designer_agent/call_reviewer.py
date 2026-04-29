@@ -1,12 +1,12 @@
 from langchain_core.messages import AIMessage, SystemMessage
 from agents.designer_agent.prompts import REVIEWER_PROMPT_TEMPLATE
-from agents.designer_agent.tools import DESIGNER_TOOLS
+from agents.shared.agent_tools import AGENT_TOOLS
 from shared.config import setup_node_llm
 from utils.utils import build_agent_messages, get_import_path
 
 def call_reviewer(state, config):
     # 1. הגדרת המודל (לפי ההמלצה: Llama-3.3-70b-versatile לביקורתיות מקסימלית)
-    llm = setup_node_llm(config, DESIGNER_TOOLS)
+    llm = setup_node_llm(config, AGENT_TOOLS)
     
     # 2. שליפת נתונים מה-State
     target_file = state.get("target_file")

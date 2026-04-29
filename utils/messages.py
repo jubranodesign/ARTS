@@ -159,6 +159,6 @@ def filter_only_successful_tests(search_results_string: str) -> str:
             filtered_tests.append(full_res.strip())
 
     if not filtered_tests:
-        return "No successful reference tests discovered in vector store."
+        return ""
 
     return "\n\n" + "\n\n".join(filtered_tests)

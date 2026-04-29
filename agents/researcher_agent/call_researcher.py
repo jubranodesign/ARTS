@@ -19,7 +19,7 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     all_messages = state.get("messages", [])
     
     risk_context = format_risk_context(state)
-    print("risk_context ", risk_context)
+    # print("risk_context ", risk_context)
     # 2. בניית ה-System Message המעודכן
     # ה-user_task נשאר כאן כי הוא קריטי להנחיית המודל בכל סיבוב
     instruction_content = f"""

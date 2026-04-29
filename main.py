@@ -155,13 +155,13 @@ def run_test_system_stream():
     vdb_instance = VectorDBService()
     processor = CodeProcessor()
     thread_id = "test_invoke_session_001"
-    config = {"vdb": vdb_instance, "processor": processor, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
+    config = {"vdb": vdb_instance, "processor": processor, "configurable": {"thread_id": thread_id, "model_provider": "mistral"}}
 
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)
 
     # 1. המשימה
-    user_task = "Write unit tests for the file scraper_service/scraper_api.py"
+    user_task = "Write unit tests for the file scraper_service/scraper.py"
     
     # עדכון ה-State הראשוני
     app.update_state(config, {
