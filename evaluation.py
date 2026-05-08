@@ -1,4 +1,4 @@
-from evaluation.retrieval.run_evals import run_retrieval_suite
+from evaluation.retrieval.eval_utils import run_retrieval_suite
 
 
 run_retrieval_suite()

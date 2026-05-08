@@ -2,6 +2,10 @@ from langchain_core.messages import SystemMessage
 from langgraph.graph.state import RunnableConfig
 from agents.researcher_agent.prompts import RESEARCHER_SYSTEM_PROMPT
 from agents.researcher_agent.tools import RESEARCHER_TOOLS
+from evaluation.llm_judge.eval_utils import evaluate_with_custom_judge
+from evaluation.llm_judge.researcher_agent.model import ResearcherJudgment
+from evaluation.llm_judge.researcher_agent.prompt import RESEARCHER_RUBRIC
+from evaluation.rag.eval_utils import evaluate_quality
 from graph.state import AgentState
 from shared.config import setup_node_llm
 from utils.state import format_risk_context
@@ -53,6 +57,30 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     # 6. קריאה למודל
     try:
         response = llm.invoke(messages_to_send)
+
+        if "### RESEARCH_DATA_DUMP ###" in response.content:
+         # שליפת ה-Ground Truth (נניח מה-config או מה-state)
+         ground_truth = config.get("configurable", {}).get("ground_truth", None)
+    
+         if ground_truth:
+            # שליחת הנתונים לאבחון
+            eval_results = evaluate_quality(
+            question=user_task,
+            final_dump=response.content,
+            message_history=trimmed_history, # ההיסטוריה שהמודל ראה בפועל
+            ground_truth=ground_truth
+            )
+            print(f"eval_results: {eval_results}")
+         
+            report = evaluate_with_custom_judge(
+                        judgment_model=ResearcherJudgment,
+                        rubric=RESEARCHER_RUBRIC,
+                        question=user_task,
+                        answer=response.content,
+                        message_history=trimmed_history
+                    )
+            print(f"evaluate_with_custom_judge: {report}")
+        
         return {"messages": [response]}
     except Exception as e:
         print(f"❌ Gemini Error: {e}")

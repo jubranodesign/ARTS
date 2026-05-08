@@ -155,14 +155,24 @@ def run_test_system_stream():
     vdb_instance = VectorDBService()
     processor = CodeProcessor()
     thread_id = "test_invoke_session_001"
-    config = {"vdb": vdb_instance, "processor": processor, "configurable": {"thread_id": thread_id, "model_provider": "mistral"}}
+    config = {
+       "vdb": vdb_instance,
+      "processor": processor,
+      "configurable": 
+              {
+                "thread_id": thread_id, 
+                 "model_provider": "mistral", 
+                 "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories."
+              }
+           }
 
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)
 
     # 1. המשימה
     user_task = "Write unit tests for the file scraper_service/scraper.py"
-    
+    # user_task = "Analyze the database commit logic in the scraper."
+
     # עדכון ה-State הראשוני
     app.update_state(config, {
         "user_input": user_task, 
