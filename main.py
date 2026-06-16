@@ -170,7 +170,7 @@ def run_test_system_stream():
     console.print("-" * 60)
 
     # 1. המשימה
-    user_task = "Write unit tests for the file scraper_service/scraper.py"
+    user_task = "Write unit tests for the file scraper_service/scraper_api.py"
     # user_task = "Analyze the database commit logic in the scraper."
 
     # עדכון ה-State הראשוני
