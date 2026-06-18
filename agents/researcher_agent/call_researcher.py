@@ -2,6 +2,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.graph.state import RunnableConfig
 from agents.researcher_agent.prompts import RESEARCHER_SYSTEM_PROMPT
 from agents.researcher_agent.tools import RESEARCHER_TOOLS
+from agents.shared.agent_tools import AGENT_TOOLS
 from evaluation.llm_judge.eval_utils import evaluate_with_custom_judge
 from evaluation.llm_judge.researcher_agent.model import ResearcherJudgment
 from evaluation.llm_judge.researcher_agent.prompt import RESEARCHER_RUBRIC
@@ -9,17 +10,18 @@ from evaluation.rag.eval_utils import evaluate_quality
 from graph.state import AgentState
 from shared.config import setup_node_llm
 from utils.state import format_risk_context
-from utils.utils import get_trimmed_messages
+from utils.utils import get_trimmed_messages, extract_python_path
 
 # הצמדת הכלים למופע המשותף
 
 def call_researcher(state: AgentState, config: RunnableConfig):
 
-    llm = setup_node_llm(config, RESEARCHER_TOOLS)
+    llm = setup_node_llm(config, AGENT_TOOLS + RESEARCHER_TOOLS)
 
     # 1. שליפת נתונים - אנחנו סומכים על ה-main שהזין HumanMessage
     current_summary = state.get("architecture_summary", "No summary available yet.")
     user_task = state.get("user_input", "No task defined.")
+    target_file = extract_python_path(user_task)
     all_messages = state.get("messages", [])
     
     risk_context = format_risk_context(state)
@@ -30,6 +32,9 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     {RESEARCHER_SYSTEM_PROMPT}
 
     {risk_context}
+
+    ### TARGET FILE TO ANALYZE:
+    {target_file}
 
     ### TARGET TASK:
     {user_task}
@@ -58,28 +63,28 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     try:
         response = llm.invoke(messages_to_send)
 
-        if "### RESEARCH_DATA_DUMP ###" in response.content:
-         # שליפת ה-Ground Truth (נניח מה-config או מה-state)
-         ground_truth = config.get("configurable", {}).get("ground_truth", None)
+        # if "### RESEARCH_DATA_DUMP ###" in response.content:
+        #  # שליפת ה-Ground Truth (נניח מה-config או מה-state)
+        #  ground_truth = config.get("configurable", {}).get("ground_truth", None)
     
-         if ground_truth:
-            # שליחת הנתונים לאבחון
-            eval_results = evaluate_quality(
-            question=user_task,
-            final_dump=response.content,
-            message_history=trimmed_history, # ההיסטוריה שהמודל ראה בפועל
-            ground_truth=ground_truth
-            )
-            print(f"eval_results: {eval_results}")
+        #  if ground_truth:
+        #     # שליחת הנתונים לאבחון
+        #     eval_results = evaluate_quality(
+        #     question=user_task,
+        #     final_dump=response.content,
+        #     message_history=trimmed_history, # ההיסטוריה שהמודל ראה בפועל
+        #     ground_truth=ground_truth
+        #     )
+        #     print(f"eval_results: {eval_results}")
          
-            report = evaluate_with_custom_judge(
-                        judgment_model=ResearcherJudgment,
-                        rubric=RESEARCHER_RUBRIC,
-                        question=user_task,
-                        answer=response.content,
-                        message_history=trimmed_history
-                    )
-            print(f"evaluate_with_custom_judge: {report}")
+        #     report = evaluate_with_custom_judge(
+        #                 judgment_model=ResearcherJudgment,
+        #                 rubric=RESEARCHER_RUBRIC,
+        #                 question=user_task,
+        #                 answer=response.content,
+        #                 message_history=trimmed_history
+        #             )
+        #     print(f"evaluate_with_custom_judge: {report}")
         
         return {"messages": [response]}
     except Exception as e:

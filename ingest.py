@@ -1,10 +1,13 @@
 
 # ייבוא השירותים שבנינו
+import os
 from services.document_factory import DocumentFactory
 from services.scanner import CodeScanner
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService
-from shared.config import REPO_PATH, VECTOR_STORE_PATH
+from shared.config import DATA_DIR, REPO_PATH, VECTOR_STORE_PATH
+from langchain_community.retrievers import BM25Retriever
+import pickle
 
 # def run_ingestion():
 #     print("--- 🏁 The script has started! ---")
@@ -105,7 +108,16 @@ def run_ingestion():
         # שלב ג': שמירה ל-ChromaDB
         success = db_service.save_documents(chunks)
 
-        if success:
+        #  סינון טסטים לטובת ה-BM25 (כדי לחפש רק תלויות קוד נקיות)
+        code_only_chunks = [c for c in chunks if not c.metadata.get("is_test", False)]
+        dependency_retriever = BM25Retriever.from_documents(code_only_chunks)
+
+        bm25_index_path = os.path.join(DATA_DIR, "bm25_index.pkl")
+        with open(bm25_index_path, "wb") as f:
+            pickle.dump(dependency_retriever, f)
+        print(f"✅ BM25 index saved to: {bm25_index_path}")
+        
+        if success and dependency_retriever:
             print("\n" + "="*30)
             print("✅ INGESTION COMPLETED SUCCESSFULLY!")
             print(f"📂 Data is now persisted in: {VECTOR_STORE_PATH}")
