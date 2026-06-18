@@ -38,3 +38,6 @@ data/vector_store/
 
 # 
 models/
+
+# Ignore python pickle file artifacts
+*.pkl
