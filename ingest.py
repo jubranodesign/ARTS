@@ -1,6 +1,7 @@
 
 # ייבוא השירותים שבנינו
 import os
+from langchain_core.documents import Document
 from services.document_factory import DocumentFactory
 from services.scanner import CodeScanner
 from services.code_processor import CodeProcessor
@@ -8,6 +9,8 @@ from services.vector_db_service import VectorDBService
 from shared.config import DATA_DIR, REPO_PATH, VECTOR_STORE_PATH
 from langchain_community.retrievers import BM25Retriever
 import pickle
+from utils.retrieval import prepare_bm25_documents, print_chunks_summary, python_code_tokenizer
+
 
 # def run_ingestion():
 #     print("--- 🏁 The script has started! ---")
@@ -60,58 +63,39 @@ import pickle
 #     except Exception as e:
 #         print(f"❌ An unexpected error occurred: {e}")
 
+
 def run_ingestion():
     print("--- 🏁 The script has started! ---")
     print(f"🚀 Starting ingestion for: {REPO_PATH}")
 
     scanner = CodeScanner()
     factory = DocumentFactory()
-    
-    # משדרגים את האתחול: מעבירים את ה-provider שבחרנו (למשל mistral)
     processor = CodeProcessor(provider="mistral")
     db_service = VectorDBService()
 
     try:
+        # שלב א': סריקה ויצירת מסמכי בסיס
         file_paths, root_path = scanner.scan(REPO_PATH)
-        documents = []
-        for path in file_paths:
-            doc = factory.create_document(path, root_path)
-            if doc:
-                documents.append(doc)
+        documents = [factory.create_document(p, root_path) for p in file_paths if factory.create_document(p, root_path)]
 
         # שלב ב': חיתוך חכם והעשרה סמנטית (Multi-Vector)
         chunks = processor.process(documents)
         
-        # --- תוספת בדיקה: הדפסת התיאורים של כל ה-Chunks שנוצרו ---
-        if chunks:
-            print("\n🔍 " + "="*20 + " MULTI-VECTOR CHUNKS SUMMARY REPORT " + "="*20)
-            print(f"Total Chunks Generated: {len(chunks)}")
-            print("-" * 76)
-            
-            for index, chunk in enumerate(chunks, start=1):
-                file_name = chunk.metadata.get('file_name', 'unknown')
-                description = chunk.page_content.replace('\n', ' ')
-                original_code = chunk.metadata.get('source_code', '')
-                
-                # חילוץ 3 שורות ראשונות מהקוד המקורי לצורך תצוגה קצרה
-                code_lines = original_code.split('\n')
-                code_preview = '\n       '.join(code_lines[:3])
-                
-                print(f"🧩 Chunk #{index} | 📄 File: {file_name}")
-                print(f"   ↳ 📌 Description: {description}")
-                print(f"   ↳ 💻 Code Preview:\n       {code_preview}\n       ...")
-                print("-" * 76)
-                
-            print("=" * 76 + "\n")
-        # -----------------------------------------------------------
+        # הדפסת דוח Chunks (הוצא לקובץ חיצוני)
+        print_chunks_summary(chunks)
 
-        # שלב ג': שמירה ל-ChromaDB
+        # שלב ג': שמירה ל-ChromaDB (החיפוש הסמנטי)
         success = db_service.save_documents(chunks)
 
-        #  סינון טסטים לטובת ה-BM25 (כדי לחפש רק תלויות קוד נקיות)
-        code_only_chunks = [c for c in chunks if not c.metadata.get("is_test", False)]
-        dependency_retriever = BM25Retriever.from_documents(code_only_chunks)
+        # שלב ד': בניית אינדקס מילות המפתח (BM25) מתוך ה-Utils החדש
+        bm25_documents = prepare_bm25_documents(chunks)
+        
+        dependency_retriever = BM25Retriever.from_documents(
+            bm25_documents,
+            preprocess_func=python_code_tokenizer
+        )
 
+        # שלב ה': שמירה לדיסק
         bm25_index_path = os.path.join(DATA_DIR, "bm25_index.pkl")
         with open(bm25_index_path, "wb") as f:
             pickle.dump(dependency_retriever, f)
@@ -130,3 +114,19 @@ def run_ingestion():
 
 if __name__ == "__main__":
     run_ingestion()
+
+#     import pickle
+
+# # 1. טען את קובץ ה-pkl הנוכחי שלך מהדיסק
+# bm25_index_path = os.path.join(DATA_DIR, "bm25_index.pkl")
+# with open(bm25_index_path, "rb") as f:
+#     retriever = pickle.load(f)
+
+# # 2. קח מחרוזת קוד פשוטה ובדוק איך ה-Retriever הנוכחי מפרק אותה
+# test_code = "def save_study(session, study_data):"
+
+# # הפעלת הטוקנייזר הפנימי של לנגצ'יין
+# tokens = retriever.preprocess_func(test_code)
+
+# print("--- 🔍 CURRENT TOKENS RESULT ---")
+# print(tokens)

@@ -19,7 +19,6 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     all_messages = state.get("messages", [])
     # print(f" summarize_architecture all_messages: {all_messages}")
     user_task = state.get("user_input", "No specific task defined.")
-    target_file = extract_python_path(user_task)
     
     test_chunks = get_all_processed_tool_data(all_messages, filter_func=filter_only_successful_tests)
     
@@ -66,7 +65,6 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
 
         return {
             "architecture_summary": final_summary_text,
-            "target_file": target_file,
             "messages": delete_messages
         }
 

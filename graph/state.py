@@ -37,3 +37,5 @@ class AgentState(TypedDict):
     risk_score: float
 
     risk_reasons: list[dict] 
+
+    target_file_code: str

@@ -2,7 +2,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.graph.state import RunnableConfig
 from agents.researcher_agent.prompts import RESEARCHER_SYSTEM_PROMPT
 from agents.researcher_agent.tools import RESEARCHER_TOOLS
-from agents.shared.agent_tools import AGENT_TOOLS
+from agents.shared.agent_tools import read_local_file
 from evaluation.llm_judge.eval_utils import evaluate_with_custom_judge
 from evaluation.llm_judge.researcher_agent.model import ResearcherJudgment
 from evaluation.llm_judge.researcher_agent.prompt import RESEARCHER_RUBRIC
@@ -16,25 +16,47 @@ from utils.utils import get_trimmed_messages, extract_python_path
 
 def call_researcher(state: AgentState, config: RunnableConfig):
 
-    llm = setup_node_llm(config, AGENT_TOOLS + RESEARCHER_TOOLS)
+    llm = setup_node_llm(config, RESEARCHER_TOOLS)
 
     # 1. שליפת נתונים - אנחנו סומכים על ה-main שהזין HumanMessage
     current_summary = state.get("architecture_summary", "No summary available yet.")
     user_task = state.get("user_input", "No task defined.")
     target_file = extract_python_path(user_task)
     all_messages = state.get("messages", [])
-    
     risk_context = format_risk_context(state)
+    target_file_content = state.get("target_file_code", None)
+    
+    # אם הוא לא קיים (סיבוב ראשון בלבד!), נקרא אותו עכשיו
+    if not target_file_content:
+        if target_file:
+            # כאן אנחנו משתמשים בפונקציה שלך, אבל מעבירים לה את הנתיב האמיתי!
+            # הערה: אם read_local_file היא כלי של לנגצ'יין, אפשר לקרוא ללוגיקה הפנימית שלה 
+            # או להפעיל אותה כך אם היא פונקציה פשוטה:
+            try:
+                # מפעילים את פונקציית הכלים שלך עם הנתיב האמיתי שחילקנו
+                target_file_content = read_local_file.invoke({"file_path": target_file})
+            except Exception:
+                # למקרה שהיא פונקציית פייתון רגילה ולא קראת לה דרך .invoke()
+                target_file_content = read_local_file(target_file)
+        else:
+            target_file_content = "No target file path detected."
+            
     # print("risk_context ", risk_context)
     # 2. בניית ה-System Message המעודכן
     # ה-user_task נשאר כאן כי הוא קריטי להנחיית המודל בכל סיבוב
+   # 2. בניית ה-System Message המעודכן (משולב)
     instruction_content = f"""
     {RESEARCHER_SYSTEM_PROMPT}
 
     {risk_context}
 
-    ### TARGET FILE TO ANALYZE:
+    ### TARGET FILE PATH:
     {target_file}
+
+    ### TARGET FILE SOURCE CODE (READ FIRST):
+    ```python
+    {target_file_content}
+    ```
 
     ### TARGET TASK:
     {user_task}
@@ -43,8 +65,8 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     {current_summary}
 
     ### EXECUTION GUIDANCE:
-    Focus your 'search_codebase' and analysis on the logic related to the identified risk factors above. 
-    Your data dump must explain how the code implementation contributes to these statistical risks.
+    1. TECHNICAL FLOW: Analyze the TARGET FILE SOURCE CODE provided above. Identify its imports and core dependencies. Then, use 'search_dependencies_bm25' to inspect those dependencies, and 'search_golden_tests_semantic' to find reference test patterns.
+    2. RISK ANALYSIS FOCUS: Focus your search and analysis on the logic related to the identified risk factors above. Your final data dump must explain how the code implementation contributes to these statistical risks.
     """
 
     system_msg = SystemMessage(content=instruction_content)
@@ -85,8 +107,11 @@ def call_researcher(state: AgentState, config: RunnableConfig):
         #                 message_history=trimmed_history
         #             )
         #     print(f"evaluate_with_custom_judge: {report}")
-        
-        return {"messages": [response]}
+        state_update = {"messages": [response]}
+        if not state.get("target_file_code") and target_file_content:
+              state_update["target_file_code"] = target_file_content
+              state_update["target_file"] = target_file
+        return state_update     
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
         # הדפסת סדר ההודעות לדיבאג במקרה של שגיאת פורמט
