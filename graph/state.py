@@ -39,3 +39,5 @@ class AgentState(TypedDict):
     risk_reasons: list[dict] 
 
     target_file_code: str
+
+    golden_test_summary: str

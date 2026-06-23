@@ -1,73 +1,82 @@
 from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
 from langgraph.graph.state import RunnableConfig
-
-from agents.researcher_agent.models import ArchitectureSnapshot
 from agents.researcher_agent.prompts import ARCHITECT_SUMMARY_PROMPT
 from graph.state import AgentState
 from shared.config import setup_node_llm
-from utils.utils import extract_message_by_content, extract_python_path, filter_only_successful_tests, get_all_processed_tool_data, get_clean_text
-
+from utils.utils import extract_message_by_content, filter_only_successful_tests, get_all_processed_tool_data, get_clean_text
+import re
+from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage
 
 def summarize_architecture(state: AgentState, config: RunnableConfig):
     """
-    צומת המסכם: לוקח את המחקר, מזקק אותו ל-ArchitectureSnapshot מפורק,
-    בונה ממנו סיכום טקסטואלי ומנקה היסטוריה.
+    צומת המסכם: שומר על ה-RESEARCH_DATA_DUMP המקורי מהחוקר, ומחלץ
+    דוגמת זהב (Golden Example) של טסטים באמצעות LLM רק אם קיימים כאלו.
     """
     llm = setup_node_llm(config)
-    structured_llm = llm.with_structured_output(ArchitectureSnapshot)
 
     all_messages = state.get("messages", [])
-    # print(f" summarize_architecture all_messages: {all_messages}")
     user_task = state.get("user_input", "No specific task defined.")
     
-    test_chunks = get_all_processed_tool_data(all_messages, filter_func=filter_only_successful_tests)
-    
-    if not test_chunks.strip():
-          print("No successful reference tests discovered in vector store.")
-
-
+    # 1. שליפת חתיכות הטסטים וה-Dump מהחוקר
+    raw_test_chunks = get_all_processed_tool_data(all_messages, filter_func=filter_only_successful_tests)
     raw_research = extract_message_by_content(all_messages, "### RESEARCH_DATA_DUMP ###")
-    # print(f" summarize_architecture raw_research: {raw_research}")
 
     if not raw_research:
         print("❌ Critical Error: No '### RESEARCH_DATA_DUMP ###' found in Researcher history.")
-        return {} # כאן ה-Flow ייעצר כי אין נתונים לסיכום
-   
-    # 2. ניקוי הטקסט (הסרת תגיות JSON או Markdown מיותרות שנצמדו ל-Dump)
-    clean_research = get_clean_text(raw_research)
-    # print(f" summarize_architecture clean_research: {clean_research}")
-
-    combined_research = f"---  RESEARCH_DATA_DUMP ---\n{clean_research}\n\n--- REFERENCE TEST CHUNKS ---\n{test_chunks}"
-    print(f" summarize_architecture combined_research: {combined_research}")
-
+        return {}
     
-    summary_instr = ARCHITECT_SUMMARY_PROMPT.format(
-        research_data=combined_research,
-        user_task=user_task,
-    )
+    clean_research = get_clean_text(raw_research)
+    print(f" summarize_architecture clean_research: {clean_research}")
 
-    input_messages = [
-        SystemMessage(content=summary_instr),
-        HumanMessage(content="Extract the technical facts into the structured schema now. Raw data only."),
-    ]
+    # ערכי ברירת מחדל למקרה שאין טסטים במאגר
+    golden_test_summary = "None"
+    confidence_score = 0.0
 
-    try:
-        result = structured_llm.invoke(input_messages)
+    # 🎯 קריאה ל-LLM תתבצע אך ורק אם קיימים טסטים מוצלחים במאגר
+    if raw_test_chunks.strip():
+        test_chunks_formatted = f"--- REFERENCE TEST CHUNKS ---\n{raw_test_chunks}"
+        print(f" test_chunks: {test_chunks_formatted}")
+        
+        summary_instr = ARCHITECT_SUMMARY_PROMPT.format(
+            test_chunks=test_chunks_formatted,
+            user_task=user_task,
+        )
 
-        if not result:
-            raise ValueError("Structured output returned None")
+        input_messages = [
+            SystemMessage(content=summary_instr),
+            HumanMessage(content="Extract the golden test pattern now as raw text."),
+        ]
 
-        final_summary_text = result.to_summary_text()
-        print(f"✅ Architecture snapshot updated. final_summary_text: {final_summary_text}")
-        print(f"✅ Architecture snapshot updated. Confidence: {result.confidence_score}")
+        try:
+            response = llm.invoke(input_messages)
+            raw_content = response.content.strip() if response else "None"
 
-        delete_messages = [RemoveMessage(id=m.id) for m in all_messages if m.id]
+            score_match = re.search(r"CONFIDENCE_SCORE:\s*([\d\.]+)", raw_content)
+            if score_match:
+                confidence_score = float(score_match.group(1))
+                golden_test_summary = re.sub(r"CONFIDENCE_SCORE:\s*[\d\.]+", "", raw_content).strip()
+            else:
+                golden_test_summary = raw_content
 
-        return {
-            "architecture_summary": final_summary_text,
-            "messages": delete_messages
-        }
+            if not golden_test_summary or golden_test_summary.lower() == "none":
+                golden_test_summary = "None"
+                confidence_score = 0.0
 
-    except Exception as e:
-        print(f"❌ Error during structured invoke: {e}")
-        raise e
+        except Exception as e:
+            print(f"❌ Error during LLM invoke: {e}")
+            raise e
+    else:
+        print("No successful reference tests discovered in vector store. Skipping LLM call.")
+
+    # 🎯 מקום אחד מרכזי ואחיד להדפסת הלוגים של העדכון
+    print(f"✅ Architecture snapshot updated. Golden Tests Summary Extracted!: {golden_test_summary}")
+    print(f"✅ Architecture snapshot updated. Confidence: {confidence_score}")
+
+    # ניקוי הודעות והחזרת המבנה ל-State
+    delete_messages = [RemoveMessage(id=m.id) for m in all_messages if m.id]
+    
+    return {
+        "architecture_summary": clean_research,
+        "golden_test_summary": golden_test_summary,
+        "messages": delete_messages
+    }
