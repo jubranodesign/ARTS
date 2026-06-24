@@ -58,8 +58,8 @@ def print_current_db_state(app, thread_id):
      print(f"📂 test_chunks ({len(test_chunks)}): {test_chunks}")
 
      # הדפסת רשימת הקבצים שנחקרו
-     files = state.values.get("investigated_files", [])
-     print(f"📂 Investigated Files ({len(files)}): {files}")
+     target_file_code = state.values.get("target_file_code", [])
+     print(f"📂 target_file_code  ({len(target_file_code)}): {target_file_code}")
 
      # הדפסת רשימת הקבצים שנחקרו
      test_plan = state.values.get("test_plan", [])
@@ -161,7 +161,7 @@ def run_test_system_stream():
       "configurable": 
               {
                 "thread_id": thread_id, 
-                 "model_provider": "mistral", 
+                 "model_provider": "groq", 
                  "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories."
               }
            }
@@ -353,5 +353,5 @@ if __name__ == "__main__":
     #  "messages": [RemoveMessage(id=m.id) for m in messages]
     # # "investigated_files": {"scraper_service/scraper_api.py"} 
     #  })
-    #  print_current_db_state(app,"test_invoke_session_003")
+    #  print_current_db_state(app,"test_invoke_session_001")
     # print_summary_evolution(app,"test_invoke_session_001")

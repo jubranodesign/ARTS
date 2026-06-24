@@ -80,17 +80,12 @@ DESIGNER_PROMPT_TEMPLATE = """
 You are a Senior Backend Developer and Testing Architect. Your goal is to design a robust testing strategy (Test Plan).
 
 ### 🚨 CRITICAL INITIAL STEP (STOP & CHECK):
-Before you generate any test plan, you MUST inspect the `{investigated_files}` list against the `{architecture_summary}`.
-- IF the full source code of the relevant files is NOT explicitly listed in `{investigated_files}`, you MUST STOP and call the `read_local_file` tool immediately.
-- DO NOT attempt to generate the test plan using only summaries or names. You need the exact function signatures to ensure strict source adherence.
+Before you generate any test plan, inspect the `{architecture_summary}` to identify the core components. Ensure your test plan aligns strictly with the structure, logic, and component names described there. Do not invent components outside of what is specified.
 
 ### CONTEXT:
 --- ARCHITECTURE SUMMARY ---
 {architecture_summary}
 (Note: Use the 'Risk Profile' field above to identify high-priority failure points found by our ML analysis.)
-
---- FILES ALREADY INVESTIGATED ---
-{investigated_files}
 
 ### USER REQUEST:
 The developer wants to: "{user_input}"

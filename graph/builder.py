@@ -67,8 +67,9 @@ workflow.add_conditional_edges(
 workflow.add_edge("researcher_tools", "researcher")
 
 workflow.add_edge("summarizer", "designer")
-workflow.add_edge("designer_tools", "update_investigated_files")
-workflow.add_edge("update_investigated_files", "designer")
+workflow.add_edge("designer_tools", "designer")
+# workflow.add_edge("designer_tools", "update_investigated_files")
+# workflow.add_edge("update_investigated_files", "designer")
 
 workflow.add_conditional_edges(
     "designer",

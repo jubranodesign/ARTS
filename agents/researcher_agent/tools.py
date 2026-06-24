@@ -1,14 +1,13 @@
 import os
 import pickle
 import re
-from typing import Optional
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 from rich.console import Console
 from rich.table import Table as RichTable
+from graph.state import AgentState
 from services.vector_db_service import VectorDBService
 from shared.config import DATA_DIR
-from utils.retrieval import python_code_tokenizer
 
 
 # @tool
@@ -33,7 +32,7 @@ from utils.retrieval import python_code_tokenizer
 #         return f"Error searching the codebase: {str(e)}"
 
 @tool
-def search_dependencies_bm25(query: str, config: Optional[RunnableConfig] = None) -> str:
+def search_dependencies_bm25(query: str, state: AgentState) -> str:
     """
     Strict keyword-based search (BM25) to find the exact implementation and 
     source code of a specific class, method, or dependency (e.g., 'UserRepository', 'EmailService').
@@ -62,15 +61,14 @@ def search_dependencies_bm25(query: str, config: Optional[RunnableConfig] = None
             return f"No exact dependency found for query: '{processed_query}'"
         
         # 4. שליפת נתיב קובץ המטרה מתוך ה-config.configurable שהזרקנו ב-Node
-        target_file = ""
-        if config and isinstance(config, dict):
-            target_file = config.get("configurable", {}).get("target_file", "")
-        
+        target_file = state.get("target_file") 
+        print("target_file: ", target_file)
         # 5. לוגיקת פילטור כירורגית ונרמול סלאשים (Windows vs Linux)
         best_match = None
         # הופכים את scraper_service/scraper_api.py לקו אחיד ב-lower case
         normalized_target = target_file.replace("\\", "/").lower() if target_file else ""
-
+        print("normalized_target: ", normalized_target)
+        
         for doc in results:
             # הופכים את scraper_service\\scraper_api.py לקו אחיד ב-lower case
             doc_path = doc.metadata.get("relative_path", "").replace("\\", "/").lower()

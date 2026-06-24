@@ -13,14 +13,12 @@ def call_designer(state: AgentState, config: RunnableConfig):
 
     # 2. שליפת נתונים בסיסיים מה-State
     architecture_summary = state.get("architecture_summary", "No summary available")
-    investigated_files = state.get("investigated_files", [])
     user_input = state.get("user_input", "")
     target_file = state.get("target_file") # וודא שזה קיים ב-State
 
     # 3. בניית ה-System Message (ה-Prompt המועשר)
     enriched_prompt_content = DESIGNER_PROMPT_TEMPLATE.format(
         architecture_summary=architecture_summary,
-        investigated_files=investigated_files,
         user_input=user_input
     )
     system_msg = SystemMessage(content=enriched_prompt_content)

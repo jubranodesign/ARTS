@@ -78,5 +78,6 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     return {
         "architecture_summary": clean_research,
         "golden_test_summary": golden_test_summary,
-        "messages": delete_messages
+        "messages": delete_messages,
+        "target_file_code": ""
     }
