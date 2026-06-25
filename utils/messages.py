@@ -92,18 +92,39 @@ def build_agent_messages(state, system_msg, target_file, execute_instruction, ll
 #     return [system_msg] + trimmed_history + [HumanMessage(content=execute_instruction)]
 
 
+# def extract_message_by_content(messages: list, content_trigger: str, message_type: str = "ai") -> str:
+#     """
+#     סורקת את היסטוריית ההודעות מהסוף להתחלה ומחזירה את התוכן של ההודעה הראשונה
+#     שמתאימה לסוג ולמחרוזת החיפוש.
+#     """
+#     for m in reversed(messages):
+#         # תמיכה גם באובייקטים של LangChain וגם בדיקשנריז פשוטים
+#         m_type = getattr(m, 'type', m.get('type') if isinstance(m, dict) else None)
+#         m_content = getattr(m, 'content', m.get('content') if isinstance(m, dict) else "")
+        
+#         if m_type == message_type and content_trigger in m_content:
+#             return m_content
+            
+#     return ""
+
 def extract_message_by_content(messages: list, content_trigger: str, message_type: str = "ai") -> str:
     """
     סורקת את היסטוריית ההודעות מהסוף להתחלה ומחזירה את התוכן של ההודעה הראשונה
-    שמתאימה לסוג ולמחרוזת החיפוש.
+    שמתאימה לסוג, מכילה את מחרוזת החיפוש, ואינה ריקה או הודעת כלי בלבד.
     """
     for m in reversed(messages):
-        # תמיכה גם באובייקטים של LangChain וגם בדיקשנריז פשוטים
+        # תמיכה באובייקטים של LangChain ובדיקשנריז
         m_type = getattr(m, 'type', m.get('type') if isinstance(m, dict) else None)
         m_content = getattr(m, 'content', m.get('content') if isinstance(m, dict) else "")
         
+        # תמיכה במצב שבו התוכן מגיע כרשימה (קורה לפעמים ב-LangChain החדש)
+        if isinstance(m_content, list):
+            # מחברים את חלקי הטקסט אם יש כאלו
+            m_content = " ".join([block.get("text", "") for block in m_content if isinstance(block, dict) and block.get("type") == "text"])
+
+        # 🎯 בדיקה חסינה: לוודא שזה ה-type הנכון, שהטריגר קיים, ושזו לא הודעת אתחול ריקה של כלי
         if m_type == message_type and content_trigger in m_content:
-            return m_content
+            return m_content.strip()
             
     return ""
 

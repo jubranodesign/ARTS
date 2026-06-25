@@ -64,7 +64,8 @@ class VectorDBService:
         for i, doc in enumerate(docs):
           metadata = doc.metadata
           source = metadata.get("relative_path", "Unknown")
-        
+          source_code = doc.metadata.get("source_code", "")
+          
            # חילוץ המטא-דאטה החדש
           is_test = metadata.get("is_test", False)
           test_status = metadata.get("test_status", "N/A")
@@ -72,8 +73,9 @@ class VectorDBService:
 
            # בניית Header עשיר במידע
           header = f"--- RESULT {i+1} | FILE: {source} | TYPE: {file_type} | IS_TEST: {is_test} | STATUS: {test_status} ---"
-        
-          formatted_results.append(f"{header}\n{doc.page_content}")
+          des = f"DESCRIPTION: {doc.page_content}"
+
+        formatted_results.append(f"{header}\n{des}\n{source_code}" )
         print("search_code formatted_results: ")
         print("\n\n".join(formatted_results))
         return "\n\n".join(formatted_results)

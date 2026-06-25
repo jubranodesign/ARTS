@@ -17,7 +17,7 @@ def wait_for_task(state: AgentState):
     target_file = extract_python_path(user_task)
     full_path = get_safe_full_path(REPO_PATH, target_file)
 
-    with open(full_path, "r") as f:
+    with open(full_path, 'r', encoding='utf-8') as f:
         code_content = f.read()
 
     risk, top_reasons = predict_risk(code_content)

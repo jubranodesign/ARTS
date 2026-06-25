@@ -45,9 +45,11 @@ def get_model(provider: str = "groq", temperature: float = 0):
     
     if provider == "groq":
         return ChatGroq(
-            model_name="qwen/qwen3-32b",
+            # model_name="qwen/qwen3-32b",
             # model_name="llama-3.3-70b-versatile",
             # model_name="llama-3.1-8b-instant",
+            # model_name="openai/gpt-oss-20b",
+            model_name="openai/gpt-oss-120b",
             temperature=temperature,
             max_tokens=4096
         )
