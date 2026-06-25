@@ -57,7 +57,7 @@ def build_agent_messages(state, system_msg, target_file, execute_instruction, ll
     trimmed_history = get_trimmed_messages(
         clean_history,
         llm,
-        max_tokens=4000
+        max_tokens=10000
     )
     return [system_msg] + trimmed_history + [HumanMessage(content=execute_instruction)]
 

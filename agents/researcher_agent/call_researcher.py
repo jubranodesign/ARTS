@@ -76,7 +76,7 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     clean_history = [m for m in all_messages if not isinstance(m, SystemMessage)]
     
     # 4. גזירה (Trim) למניעת חריגת טוקנים
-    trimmed_history = get_trimmed_messages(clean_history, llm, max_tokens=4000)
+    trimmed_history = get_trimmed_messages(clean_history, llm, max_tokens=50000)
 
     # 5. בניית הרשימה הסופית: [System, Human (מה-main), AI, Tool...]
     messages_to_send = [system_msg] + trimmed_history

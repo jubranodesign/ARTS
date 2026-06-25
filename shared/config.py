@@ -103,6 +103,14 @@ def get_model(provider: str = "groq", temperature: float = 0):
         tiktoken_model_name="gpt-4o" 
     )
     
+    elif provider == "github":
+        return ChatOpenAI(
+        base_url="https://models.inference.ai.azure.com",
+        # model="gpt-4o-mini"
+        model="gpt-4o"
+        # model="meta-llama/llama-3.3-70b-versatile"
+    )
+
     # ברירת מחדל במידה ולא נמצא ספק
     raise ValueError(f"Provider {provider} is not supported.")
 

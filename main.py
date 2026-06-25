@@ -161,7 +161,7 @@ def run_test_system_stream():
       "configurable": 
               {
                 "thread_id": thread_id, 
-                 "model_provider": "groq", 
+                 "model_provider": "mistral", 
                  "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories."
               }
            }

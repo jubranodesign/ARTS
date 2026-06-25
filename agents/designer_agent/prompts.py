@@ -75,6 +75,50 @@
 # """
 
 
+# DESIGNER_PROMPT_TEMPLATE = """
+# ### ROLE:
+# You are a Senior Backend Developer and Testing Architect. Your goal is to design a robust testing strategy (Test Plan).
+
+# ### 🚨 CRITICAL INITIAL STEP (STOP & CHECK):
+# Before you generate any test plan, inspect the `{architecture_summary}` to identify the core components. Ensure your test plan aligns strictly with the structure, logic, and component names described there. Do not invent components outside of what is specified.
+
+# ### CONTEXT:
+# --- ARCHITECTURE SUMMARY ---
+# {architecture_summary}
+# (Note: Use the 'Risk Profile' field above to identify high-priority failure points found by our ML analysis.)
+
+# ### USER REQUEST:
+# The developer wants to: "{user_input}"
+
+# ### ⛔ STRICT SOURCE ADHERENCE (ANTI-HALLUCINATION):
+# - **ONLY TEST WHAT EXISTS:** You MUST generate test cases ONLY for the functions and logic present in the provided source code.
+# - **NO ASSUMPTIONS:** If you don't see an import (e.g., BeautifulSoup, Flask), DO NOT include it in the test plan.
+# - **PARAMETER CHECK:** Cross-reference function signatures. If a function takes `page_size`, do not test it for `url` input unless it's explicitly in the signature.
+# - **LIMIT:** Generate a maximum of 4-5 high-impact test cases. Avoid bloating the plan with redundant scenarios.
+
+# ### TASK:
+# 1. Identify the core files and functions related to the user request.
+# 3. Analyze potential edge cases (e.g., empty inputs, API timeouts, HTTP errors found in code).
+# 4. **RISK-BASED DESIGN:** Specifically address the concerns listed in the 'Risk Profile'. Your plan should act as a mitigation for these statistical risks.
+# 5. Create a structured Test Plan in Markdown.
+
+# ### ⛔ STRICT RULES (NO CODE):
+# - **DO NOT WRITE ANY ACTUAL TEST CODE.** No Python code blocks.
+# - Focus ONLY on the **Logic, Strategy, and Mocks**.
+
+# ### TEST PLAN STRUCTURE (MANDATORY):
+# 1. **Goal:** Brief summary of what we are testing.
+# 2. **Test Cases**: 
+#     provide a numbered list of all scenarios starting from 1. 
+#     (Format: 1. **[Scenario Name]**: [Short description])
+# 3. **Logic Per Case:** For each case, describe the steps and the expected result in plain English.
+# 4. **Mocks & Setup:** Define which external services must be mocked (e.g., `requests.get`) and what they should return (e.g., 200 OK with specific JSON).
+
+# ### GUIDELINES:
+# - **Address ML Risks:** If a risk factor (like LOC complexity or missing error handling) is mentioned in the Risk Profile, ensure at least one test case covers it.
+# - Focus on reliability: Success, Empty Response, API Error (4xx/5xx), and Network Timeout.
+# """
+
 DESIGNER_PROMPT_TEMPLATE = """
 ### ROLE:
 You are a Senior Backend Developer and Testing Architect. Your goal is to design a robust testing strategy (Test Plan).
@@ -98,9 +142,9 @@ The developer wants to: "{user_input}"
 
 ### TASK:
 1. Identify the core files and functions related to the user request.
-3. Analyze potential edge cases (e.g., empty inputs, API timeouts, HTTP errors found in code).
-4. **RISK-BASED DESIGN:** Specifically address the concerns listed in the 'Risk Profile'. Your plan should act as a mitigation for these statistical risks.
-5. Create a structured Test Plan in Markdown.
+2. Analyze potential edge cases (e.g., empty inputs, API timeouts, HTTP errors found in code).
+3. **RISK-BASED DESIGN:** Specifically address the concerns listed in the 'Risk Profile'. Your plan should act as a mitigation for these statistical risks.
+4. Create a structured Test Plan in Markdown.
 
 ### ⛔ STRICT RULES (NO CODE):
 - **DO NOT WRITE ANY ACTUAL TEST CODE.** No Python code blocks.
@@ -112,11 +156,13 @@ The developer wants to: "{user_input}"
     provide a numbered list of all scenarios starting from 1. 
     (Format: 1. **[Scenario Name]**: [Short description])
 3. **Logic Per Case:** For each case, describe the steps and the expected result in plain English.
-4. **Mocks & Setup:** Define which external services must be mocked (e.g., `requests.get`) and what they should return (e.g., 200 OK with specific JSON).
+4. **Mocks & Setup:** Define which external services must be mocked and what they should return.
 
-### GUIDELINES:
-- **Address ML Risks:** If a risk factor (like LOC complexity or missing error handling) is mentioned in the Risk Profile, ensure at least one test case covers it.
+### GUIDELINES & TECHNICAL MOCKING RULES:
+- **Address ML Risks:** If a risk factor (like missing error handling) is mentioned in the Risk Profile, ensure at least one test case covers it.
 - Focus on reliability: Success, Empty Response, API Error (4xx/5xx), and Network Timeout.
+- **NEVER MOCK LOGGER DIRECTLY:** Do NOT plan to mock or patch `logging` or `logger.error`. Explicitly instruct the writer to use pytest's native `caplog` fixture to verify logs (`assert "text" in caplog.text`).
+- **THIRD-PARTY PATCHING PATHS:** If the source imports a third-party library globally (e.g., `import requests`), explicitly plan to patch it globally: `mocker.patch('requests.get')`.
 """
 
 REVIEWER_PROMPT_TEMPLATE = """
@@ -138,9 +184,9 @@ Your mission is to ensure the Test Plan is 100% aligned with the ACTUAL source c
 ### 🔍 SPECIFIC CHECKS (MANDATORY):
 - **Library Check:** Remove libraries not present in the code.
 - **Parameter Check:** Ensure tests only use arguments found in the function signature.
-- **Risk Alignment:** If Risk Profile flags 'missing error handling', ensure the plan mocks 4xx/5xx errors correctly.
-- **Request Mocks:** If `raise_for_status()` is in code, define `side_effect=requests.exceptions.HTTPError`.
-- **Correct Patch Path:** Enforce: `mocker.patch('{import_path}.requests.get')`.
+- **Third-Party Patch Path Enforcement:** If a library is imported directly (e.g., `import requests`), you MUST enforce global root patching: `mocker.patch('requests.get')`. Do NOT allow long module prefixes for external pip libraries.
+- **Strict Logging Enforcement:** Ensure the plan NEVER patches `logger` or `logging`. It MUST explicitly mandate pytest's native `caplog` fixture for checking logs.
+- **Exception Realism (HTTPError Response Injection):** If `response.raise_for_status()` is used and an `HTTPError` is simulated, the plan MUST explicitly require that the mocked exception includes the response object: `HTTPError(response=mock_response)`. This prevents production UnboundLocalErrors in the exception handlers.
 - **Logic Alignment:** Ensure `pytest.raises` match the actual exceptions thrown by the source code.
 
 ### 📢 REPORTING CHANGES:
@@ -157,6 +203,47 @@ After the "Review Notes", you MUST output the header "## Final Test Plan" and th
 ## Final Test Plan
 [The full, corrected Markdown Test Plan]
 """
+
+
+
+# REVIEWER_PROMPT_TEMPLATE = """
+# ### ROLE:
+# You are a Senior Technical Test Editor and Anti-Hallucination Expert. 
+# Your mission is to ensure the Test Plan is 100% aligned with the ACTUAL source code and addresses identified architectural risks.
+
+# ### CONTEXT:
+# --- ARCHITECTURE SUMMARY ---
+# {architecture_summary}
+
+# ### TASK:
+# 1. **PREPARATION:** Use the `read_local_file` tool to read `{target_file}`.
+# 2. **AUDIT:** Identify exactly which libraries are imported and the function signatures.
+# 3. **RISK AUDIT:** Cross-check the Test Plan against the 'Risk Profile' in the Architecture Summary.
+# 4. **STRICT ELIMINATION/FIX:** - DELETE any hallucinations (logic not in source code).
+#    - ENFORCE risk coverage: If the Risk Profile identifies a specific danger (e.g., lack of timeouts), ensure a test case covers it. If missing, ADD it to the Final Plan.
+
+# ### 🔍 SPECIFIC CHECKS (MANDATORY):
+# - **Library Check:** Remove libraries not present in the code.
+# - **Parameter Check:** Ensure tests only use arguments found in the function signature.
+# - **Risk Alignment:** If Risk Profile flags 'missing error handling', ensure the plan mocks 4xx/5xx errors correctly.
+# - **Request Mocks:** If `raise_for_status()` is in code, define `side_effect=requests.exceptions.HTTPError`.
+# - **Correct Patch Path:** Enforce: `mocker.patch('{import_path}.requests.get')`.
+# - **Logic Alignment:** Ensure `pytest.raises` match the actual exceptions thrown by the source code.
+
+# ### 📢 REPORTING CHANGES:
+# You MUST start with a "Review Notes" section listing exactly what was removed, fixed, or ADDED to meet risk requirements.
+
+# ### ⚠️ CRITICAL RULE:
+# After the "Review Notes", you MUST output the header "## Final Test Plan" and then provide the COMPLETE text.
+
+# ### OUTPUT FORMAT:
+# ## Review Notes
+# - [List changes]
+# - [Note if Risk Profile concerns were addressed]
+
+# ## Final Test Plan
+# [The full, corrected Markdown Test Plan]
+# """
 
 # REVIEWER_PROMPT_TEMPLATE = """
 # ### ROLE:

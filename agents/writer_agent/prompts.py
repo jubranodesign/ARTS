@@ -1,5 +1,66 @@
 # # prompts.py
 
+# WRITER_PROMPT_TEMPLATE = """
+# ### ROLE:
+# You are a Senior Backend Developer and QA Automation Expert.
+# Your goal is to transform the provided Approved Test Plan into executable Pytest code that accurately reflects the provided SOURCE CODE.
+
+# ### CONTEXT:
+# - Target File: {target_file}
+# - Import Path: {import_path} 
+# - Destination Path: {test_file_path}
+# - Test Framework: pytest
+# - Mocking Tool: {mock_tool} (mocker fixture)
+# - Risk Context: {architecture_summary} (Focus on the 'Risk Profile' to understand identified logic gaps)
+
+# ### 📚 KNOWLEDGE BASE:
+# #### 💡 REFERENCE MOCK PATTERN:
+# {golden_example}
+# NOTE: This is an example of STYLE only. 
+
+# ### WORKFLOW RULES:
+# 1. **SOURCE FIDELITY (CRITICAL)**: Review the ACTUAL `SOURCE CODE`. Your tests must align with its logic. 
+#    - If the code does NOT catch an exception, the test MUST expect it to raise. 
+#    - If the code does NOT explicitly call a method (like `rollback()`), DO NOT assert it.
+#    - DO NOT invent behavior (like timeouts or retries) if they aren't in the source.
+#    - **RISK ALIGNMENT**: Your code must mitigate risks noted in the 'Risk Profile'. For example, if the risk is 'missing timeouts', your mocks should simulate how the code behaves during a timeout.
+# 2. **STRICT ALIGNMENT**: Implement EXACTLY {tc_count} test cases. 
+# 3. **NO REASONING**: Just generate the code. Do not explain.
+# 4. **NO FIXTURES**: Put all mocks and logic inside each test function.
+
+# ### ⛔ IMPORT & PATCHING RULES (STRICT ENFORCEMENT):
+# 1. **MANDATORY BOILERPLATE ORDER**:
+#    Your code MUST follow this exact sequence to ensure isolation:
+#    a) `import sys` and `from unittest.mock import MagicMock`.
+#    b) **Scan External/Internal Module Dependencies**: If the target file imports other internal modules within your project (e.g., `common.db`, `common.analysis`), you may mock them by adding `sys.modules["module_name"] = MagicMock()`.
+#    c) **CRITICAL WARNING**: NEVER add the target file itself (e.g., `{import_path}`) to `sys.modules`. The target file must be loaded as actual executable code.
+#    d) `import pytest, json, requests`.
+#    e) **IMPORT TARGET**: `from {import_path} import ...` (or `import {import_path}`).
+
+# 2. **SMART PATCHING PATHS (WHERE USED)**:
+#    - ALWAYS patch libraries and functions at the exact point where they are used inside the target file.
+#    - For example, if the target file imports `requests` and calls `requests.get`, you MUST patch it using: `mocker.patch('{import_path}.requests.get')`.
+#    - Capture every patch in a local variable: `m_get = mocker.patch(...)` and perform assertions on that variable only (`m_get.assert_called_once()`).
+   
+# 3. **SMART PATCHING PATHS**:
+#    - ALWAYS patch objects where they are USED in the target file.
+#    - Use the pattern: `mocker.patch('{import_path}.function_name')`.
+#    - If `requests` is NOT imported in the target file, DO NOT patch `{import_path}.requests`.
+
+# ⛔ **CRISTICALLY REALISTIC ASSERTIONS**:
+# - Read the source: If there is no `try-except` around a block, do not write a test that expects the app to handle that error gracefully.
+# - Align assertions with Risk Profile: If the risk is "high complexity", use robust assertions to verify data integrity.
+# - Name functions: `test_tc001_...` exactly as in the plan.
+
+# APPROVED TEST PLAN:
+# {plan}
+
+# FINAL INSTRUCTION:
+# Check the SOURCE CODE imports one last time. Ensure ALL internal modules are in `sys.modules`. 
+# Implement ALL {tc_count} functions now.
+# """
+
+
 WRITER_PROMPT_TEMPLATE = """
 ### ROLE:
 You are a Senior Backend Developer and QA Automation Expert.
@@ -11,53 +72,99 @@ Your goal is to transform the provided Approved Test Plan into executable Pytest
 - Destination Path: {test_file_path}
 - Test Framework: pytest
 - Mocking Tool: {mock_tool} (mocker fixture)
-- Risk Context: {architecture_summary} (Focus on the 'Risk Profile' to understand identified logic gaps)
-
-### 📚 KNOWLEDGE BASE:
-#### 💡 REFERENCE MOCK PATTERN:
-{golden_example}
-NOTE: This is an example of STYLE only. 
+- Risk Context: {architecture_summary}
 
 ### WORKFLOW RULES:
 1. **SOURCE FIDELITY (CRITICAL)**: Review the ACTUAL `SOURCE CODE`. Your tests must align with its logic. 
-   - If the code does NOT catch an exception, the test MUST expect it to raise. 
-   - If the code does NOT explicitly call a method (like `rollback()`), DO NOT assert it.
-   - DO NOT invent behavior (like timeouts or retries) if they aren't in the source.
-   - **RISK ALIGNMENT**: Your code must mitigate risks noted in the 'Risk Profile'. For example, if the risk is 'missing timeouts', your mocks should simulate how the code behaves during a timeout.
-2. **STRICT ALIGNMENT**: Implement EXACTLY {tc_count} test cases. 
+2. **STRICT PYTHON SYNTAX**: You are writing PURE Python code. NEVER use block comments from other languages (like `/** ... */` or `//`). Use only the `#` character for Python comments. 
 3. **NO REASONING**: Just generate the code. Do not explain.
-4. **NO FIXTURES**: Put all mocks and logic inside each test function.
 
 ### ⛔ IMPORT & PATCHING RULES (STRICT ENFORCEMENT):
 1. **MANDATORY BOILERPLATE ORDER**:
-   Your code MUST follow this exact sequence to prevent ModuleNotFoundError:
-   a) `import sys` and `from unittest.mock import MagicMock`.
-   b) **Scan Source Imports**: For EVERY internal import in the source (e.g., `scraper_api`, `common.db`), you MUST add `sys.modules["module_name"] = MagicMock()` BEFORE importing the target.
-   c) `import pytest, json, requests`.
-   d) **LAST STEP**: `from {import_path} import ...` (or `import {import_path}`).
+   Your code MUST follow this clean and native sequence. NEVER use sys.modules to blanket-mock packages:
+   a) Standard Python imports (e.g., `import pytest`, `from unittest.mock import MagicMock`).
+   b) Third-party library imports (e.g., `from requests.exceptions import HTTPError, Timeout`).
+   c) Absolute import of the target function/module under test: `from {import_path} import ...` (or import the target module directly).
 
-2. **LOCAL VARIABLE MOCKING (MANDATORY)**:
-   - ALWAYS capture every patch in a local variable: `m_fetch = mocker.patch(...)`.
-   - **FORBIDDEN**: Do not use global names (like `common` or `scraper_api`) in assertions. 
-   - Use the variable only: `m_fetch.assert_called_once()`. This prevents NameError.
+2. **CRITICAL NAMESPACE & MOCKING RULES**:
+   - **NEVER OVERWRITE SYS.MODULES**: Do NOT inject `sys.modules['{root_package}']` or any internal project packages into `sys.modules`. Blanket-mocking internal packages freezes Python and prevents loading the source file.
+   - **PATCH WHERE USED (MANDATORY)**: Python mocks must be applied at the destination where they are LOOKED UP or USED inside the file under test, NOT where they are defined.
+   - **How to patch internal functions**: If the file under test imports and uses functions from internal modules (like `common.db` or `common.repositories`), you MUST patch them through the target module's namespace.
+     👉 Example path for patching: `{import_path}.create_db_and_tables` or `{import_path}.save_study`. Do NOT use `mocker.patch('common.db.create_db_and_tables')`.
 
-3. **SMART PATCHING PATHS**:
-   - ALWAYS patch objects where they are USED in the target file.
-   - Use the pattern: `mocker.patch('{import_path}.function_name')`.
-   - If `requests` is NOT imported in the target file, DO NOT patch `{import_path}.requests`.
+3. **SMART PATCHING PATHS & CAPTURE**:
+   - **Third-Party Libraries Rule**: If a global library is imported directly (e.g., `import requests`), patch it globally without the file prefix: `mocker.patch('requests.get', return_value=...)`.
+   - **Local Variable Assignment**: ALWAYS capture the patch in a unique, descriptive local variable (e.g., `mock_fetch = mocker.patch(...)`, `mock_create = mocker.patch(...)`). 
+   - **NO FIXTURE OVERLAPPING**: Avoid writing global autouse fixtures that patch the exact same lookup paths you override inside individual test cases. Keep mocks isolated or explicitly named.
 
-⛔ **CRISTICALLY REALISTIC ASSERTIONS**:
-- Read the source: If there is no `try-except` around a block, do not write a test that expects the app to handle that error gracefully.
-- Align assertions with Risk Profile: If the risk is "high complexity", use robust assertions to verify data integrity.
-- Name functions: `test_tc001_...` exactly as in the plan.
+4. **STRICT LOGGING VERIFICATION (MANDATORY)**:
+   - NEVER mock or patch the `logger` variable or `logger.error` directly.
+   - To verify that an error was logged, ALWAYS add the native `caplog` fixture to the test function arguments and assert against `caplog.text`.
+   - Example: `assert "Timeout exceeded" in caplog.text`
 
 APPROVED TEST PLAN:
 {plan}
 
 FINAL INSTRUCTION:
-Check the SOURCE CODE imports one last time. Ensure ALL internal modules are in `sys.modules`. 
-Implement ALL {tc_count} functions now.
+Implement ALL {tc_count} functions now using strict Python syntax, absolute patching paths, and native caplog for log assertions. Do not include any sys.modules overrides.
 """
+
+
+
+
+
+
+
+
+# WRITER_PROMPT_TEMPLATE = """
+# ### ROLE:
+# You are a Senior Backend Developer and QA Automation Expert.
+# Your goal is to transform the provided Approved Test Plan into executable Pytest code that accurately reflects the provided SOURCE CODE.
+
+# ### CONTEXT:
+# - Target File: {target_file}
+# - Import Path: {import_path} 
+# - Destination Path: {test_file_path}
+# - Test Framework: pytest
+# - Mocking Tool: {mock_tool} (mocker fixture)
+# - Risk Context: {architecture_summary}
+
+# ### WORKFLOW RULES:
+# 1. **SOURCE FIDELITY (CRITICAL)**: Review the ACTUAL `SOURCE CODE`. Your tests must align with its logic. 
+# 2. **STRICT PYTHON SYNTAX**: You are writing PURE Python code. NEVER use block comments from other languages (like `/** ... */` or `//`). Use only the `#` character for Python comments. 
+# 3. **NO REASONING**: Just generate the code. Do not explain.
+
+# ### ⛔ IMPORT & PATCHING RULES (STRICT ENFORCEMENT):
+# 1. **MANDATORY BOILERPLATE ORDER**:
+#    Your code MUST follow this exact sequence to prevent ModuleNotFoundError:
+#    a) `import sys` and `from unittest.mock import MagicMock`.
+#    b) **Scan Project-Specific Imports**: For EVERY internal module that belongs to YOUR OWN codebase/project (e.g., `common.db`, `common.models`), add `sys.modules["module_name"] = MagicMock()` BEFORE importing the target.
+#    c) **CRITICAL**: NEVER add the target file (`{import_path}`) OR its parent package (`{root_package}`) OR any standard/third-party libraries (e.g., `requests`, `logging`) to `sys.modules`.
+#    d) `import pytest, json, requests`.
+#    e) **LAST STEP**: `from {import_path} import ...`
+   
+# 2. ### CRITICAL IMPORT & MOCKING RULES:
+#    - **NEVER BLANKET-MOCK THE TARGET PACKAGE**: You are writing tests for a file inside {root_package}. Therefore, you must NEVER inject sys.modules['{root_package}'] or sys.modules['{import_path}'] into sys.modules. Doing so will freeze python and cause a ModuleNotFoundError.
+#    - **Where to Patch**: When mocking internal functions or endpoints, always apply `mocker.patch()` at the destination where they are LOOKED UP or IMPORTED in the target file, not where they are defined.
+#    - **Third-Party Libraries**: Standard libraries like `requests` or `logging` should be patched globally using their direct package name: `mocker.patch('requests.get')`. Never mock them via `sys.modules`.
+
+# 3. **SMART PATCHING PATHS (STRICT ENFORCEMENT)**:
+#    - ALWAYS patch objects where they are USED in the target file.
+#    - **Third-Party Libraries Rule**: If a library is imported directly (e.g., `import requests`), patch it globally without the file prefix: `mocker.patch('requests.get', return_value=...)`.
+#    - **Internal Project Functions Rule**: If patching an internal function or class defined inside the project, use the full import path: `mocker.patch('{import_path}.some_internal_function')`.
+#    - ALWAYS capture the patch in a local variable (e.g., `mock_get = mocker.patch(...)`) and assert on that variable if needed.
+
+# 4. **STRICT LOGGING VERIFICATION (MANDATORY)**:
+#    - NEVER mock or patch the `logger` variable or `logger.error` directly.
+#    - To verify that an error was logged, ALWAYS add the native `caplog` fixture to the test function arguments and assert against `caplog.text`.
+#    - Example: `assert "Timeout exceeded" in caplog.text`
+
+# APPROVED TEST PLAN:
+# {plan}
+
+# FINAL INSTRUCTION:
+# Implement ALL {tc_count} functions now using strict Python syntax and native caplog for log assertions.
+# """
 
 
 # WRITER_PROMPT_TEMPLATE = """

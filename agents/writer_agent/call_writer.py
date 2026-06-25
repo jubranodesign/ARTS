@@ -13,8 +13,23 @@ def call_writer(state: AgentState, config: RunnableConfig):
     
     # --- בדיקת עצירה (אם הכתיבה הצליחה) ---
     if messages and isinstance(messages[-1], ToolMessage):
-        if messages[-1].name == "write_local_file" and "SUCCESS" in messages[-1].content.upper():
+        last_tool_msg = messages[-1]
+        print("last_tool_msg.name ", last_tool_msg.name)
+
+        if last_tool_msg.name == "patch_test_code":
+         print("last_tool_msg.content ", last_tool_msg.content)
+
+        # א) טיפול במצב של כתיבת קובץ מלא מושלמת
+        if last_tool_msg.name == "write_local_file" and "SUCCESS" in last_tool_msg.content.upper():
             return {"messages": [AIMessage(content="Test file has been saved successfully. Task complete.")]}
+        
+        # ב) טיפול במצב של Patch כירורגי מוצלח - משחרר את הנעילה ומחזיר ל-Executor
+        if last_tool_msg.name == "patch_test_code" and "SUCCESSFULLY" in last_tool_msg.content.upper():
+            print("🔄 Patch applied successfully! Resetting state status and routing to executor...")
+            return {
+                "messages": [AIMessage(content="I have successfully applied the patch to the test file. Routing back to execution.")],
+                "test_run_status": "pending"  # 👈 מאפס את הסטטוס כדי לא להיתקע בלופ ה-failed
+            }
 
     # 2. הגדרת ה-LLM (לפי ההמלצה: Qwen-2.5-32b לביצוע מדויק של Mocks)
     llm = setup_node_llm(config, AGENT_TOOLS + WRITER_TOOLS) 
@@ -32,6 +47,9 @@ def call_writer(state: AgentState, config: RunnableConfig):
 
     print("call_writer golden_example: ", golden_example)
     
+    root_package = target_file.split('/')[0] if '/' in target_file else ""
+    print("root_package: ", root_package)
+
     # 4. בניית ה-System Message (ה-Prompt המלא)
     full_prompt = WRITER_PROMPT_TEMPLATE.format(
         repo_path=REPO_PATH,
@@ -43,63 +61,45 @@ def call_writer(state: AgentState, config: RunnableConfig):
         import_path=import_path,
         tc_count=tc_count,
         golden_example=golden_example,
-         architecture_summary=architecture_summary
+        architecture_summary=architecture_summary,
+        root_package=root_package
     )
     system_msg = SystemMessage(content=full_prompt + f"\n\nCRITICAL: Implement ALL {tc_count} cases identified.")
 
-    # 5. הגדרת ה-Instruction לביצוע (שלב ב')
-    # אנחנו בודקים אם מדובר בתיקון שגיאות או בכתיבה חדשה
     if state.get("test_run_status") == "failed":
+        last_logs = state.get('last_run_logs', '')
+
+        import_crash_hint = ""
+        # 🎯 הרחבת התנאי: בודק אם השגיאה קשורה לחבילת האב או לנתיב האימפורט הישיר
+        if "ModuleNotFoundError" in last_logs and root_package in last_logs:
+            import_crash_hint = (
+                f"🚨 CRITICAL DIAGNOSIS: The ModuleNotFoundError is caused BECAUSE you blocked the source package in sys.modules!\n"
+                f"You MUST create a SEARCH/REPLACE block to DELETE any lines assigning `sys.modules['{root_package}']` or `sys.modules['{import_path}']` from the top of the file immediately!\n"
+                f"Never blanket-mock the current package under test, as it prevents python from loading the target file.\n\n"
+            )
+            
         instruction = (
-            f"🚨 TEST FAILED. You must fix the code in `{test_file_path}`.\n"
-            f"ERROR LOGS:\n{state.get('last_run_logs')}\n"
-            f"Refer to the source code and the original Test Plan. Fix the Mocks or Logic."
+            f"🚨 TEST FAILED.\n"
+            f"❌ PYTEST ERROR LOGS:\n{last_logs}\n\n"
+            f"{import_crash_hint}" # מוזרק דינמית לכל שירות/תיקייה
+            f"STRICT REPAIR RULES (CRITICAL):\n"
+            f"1. **NO EMPTY PATCHES**: Never apply a patch where the SEARCH and REPLACE blocks are identical.\n"
+            f"2. **NEVER BLANKET MOCK THE TARGET**: Do NOT put `sys.modules['{root_package}']` into sys.modules.\n"
+            f"3. **EXECUTION**: Immediately call `patch_test_code` with file_path='{test_file_path}' and your patch_content.\n"
         )
     else:
-        # instruction = (
-        #     f"I see the source code. STOP REASONING NOW.\n"
-        #     f"TASK: Implement the Approved Test Plan EXACTLY as written above.\n\n"
-        #     f"STRICT RULES (CRITICAL):\n"
-        #     f"1. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone Pytest functions.\n"
-        #     f"2. **PATCH PATH**: Use: `mocker.patch('{import_path}.requests.get')`.\n"
-        #     f"3. **IMPORTS**: Include 'import pytest', 'import requests', 'import json'.\n"
-        #     f"4. **EXECUTION**: IMMEDIATELY call `write_local_file` to: {test_file_path}.\n"
-        #     f"DO NOT explain. Just generate the code."
-        # )
-#         instruction = (
-#     f"I see the source code. STOP REASONING NOW.\n"
-#     f"TASK: Implement the Approved Test Plan EXACTLY as written above.\n\n"
-#     f"STRICT RULES (CRITICAL):\n"
-#     f"1. **REFERENCE USE**: Review the provided Chunks from past successful tests and mimic their mocking patterns.\n"
-#     f"2. **IMPORT SAFETY**: If you detect 'sqlmodel' or DB imports in the source, use `sys.modules` patching BEFORE the main import to prevent ImportError.\n"
-#     f"3. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone Pytest functions.\n"
-#     f"4. **PATCH PATH**: Use: `mocker.patch('{import_path}.requests.get')`.\n"
-#     f"5. **EXECUTION**: IMMEDIATELY call `write_local_file` to: {test_file_path}.\n"
-#     f"DO NOT explain. Just generate the code."
-# )
-    #   instruction = (
-    #         f"I see the source code. STOP REASONING NOW.\n"
-    #         f"TASK: Implement the Approved Test Plan EXACTLY as written above.\n\n"
-    #         f"STRICT RULES (CRITICAL):\n"
-    #         f"1. **REFERENCE USE**: Review the 'GOLDEN EXAMPLE' and mimic its mocking patterns.\n"
-    #         f"2. **IMPORT SAFETY**: You MUST use `sys.modules` patching for ALL internal modules (like scraper_api, common.db) BEFORE the main import to prevent ModuleNotFoundError.\n"
-    #         f"3. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone Pytest functions.\n"
-    #         f"4. **SMART PATCHING**: ONLY patch what is imported in the source. If `requests` is NOT in source imports, patch the local function instead (e.g., `mocker.patch('{import_path}.fetch_studies')`).\n"
-    #         f"5. **EXECUTION**: IMMEDIATELY call `write_local_file` with complete code to: {test_file_path}.\n"
-    #         f"DO NOT explain. Just generate the code."
-    #     )
-     instruction = (
-    f"I see the source code. STOP REASONING NOW.\n"
-    f"TASK: Implement the Approved Test Plan based on the ACTUAL source code provided.\n\n"
-    f"STRICT RULES (CRITICAL):\n"
-    f"1. **SOURCE FIDELITY**: Do not assume logic that doesn't exist. ONLY assert calls (like commit, save, fetch) that are visible in the source code. If the code doesn't call a method (e.g., rollback), do not test for it.\n"
-    f"2. **EXCEPTION REALISM**: Observe how the source handles errors. If the source uses try/except to catch an error, the test should NOT use `pytest.raises`. If the source let an error propagate (like fetch_studies), the test MUST handle it accordingly.\n"
-    f"3. **IMPORT SAFETY**: You MUST use `sys.modules` patching for `scraper_api`, `common.db`, and `psycopg2` BEFORE the main import.\n"
-    f"4. **SMART PATCHING**: Patch what is imported. Use `mocker.patch('{import_path}.fetch_studies')` for API calls.\n"
-    f"5. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone functions.\n"
-    f"6. **EXECUTION**: IMMEDIATELY call `write_local_file` with complete code to: {test_file_path}.\n"
-)
-
+        # 🎯 שים לב להזחה (Tab) פנימה! עכשיו זה ירוץ אך ורק בריצה הראשונה
+        instruction = (
+            f"I see the source code. STOP REASONING NOW.\n"
+            f"TASK: Implement the Approved Test Plan based on the ACTUAL source code provided.\n\n"
+            f"STRICT RULES (CRITICAL):\n"
+            f"1. **SOURCE FIDELITY**: Do not assume logic that doesn't exist. ONLY assert calls visible in the source code.\n"
+            f"2. **EXCEPTION REALISM**: Observe how the source handles errors. Match try/except logic exactly.\n"
+            f"3. **IMPORT & PATCHING SAFETY**: Follow the MANDATORY BOILERPLATE ORDER defined in the system prompt. Never put the target file `{import_path}` or global pip libraries like `requests` into `sys.modules`.\n"
+            f"4. **SMART PATCHING**: For globally imported pip libraries, patch at the root: `mocker.patch('requests.get')`.\n"
+            f"5. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone Pytest functions.\n"
+            f"6. **EXECUTION**: IMMEDIATELY call `write_local_file` with complete code to: {test_file_path}.\n"
+        )
     # 6. שימוש ב-Helper האחיד (מטפל ב-Trim ובמניעת לופים)
     input_messages = build_agent_messages(
         state=state,

@@ -84,7 +84,9 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
             
         # פולבק: אם הכל סונן, ניקח את התוצאה הראשונה
         if not best_match:
-            best_match = results[0]
+            # best_match = results[0]
+            print(f"⚠️ Search concluded: No external dependencies found for query '{processed_query}' outside of the target file.")
+            return f"INFO: No external dependencies discovered in the codebase for symbol: '{processed_query}'."
             
         # 6. חילוץ הנתונים מהצ'אנק הנבחר
         relative_path = best_match.metadata.get("relative_path", "Unknown path")
