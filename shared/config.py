@@ -13,6 +13,7 @@ load_dotenv()
 # 2. הגדרות נתיבים
 # כאן אתה שם את הנתיב לפרויקט שאתה רוצה לסרוק
 REPO_PATH = r"C:\Users\Remah\OneDrive\Documents\interview\coveredhealth"
+REPO_SEED_PATH = r"C:\Users\Remah\OneDrive\Documents\interview\coveredhealth\seed_data"
 TEST_FRAMEWORK = "pytest"
 MOCK_TOOL = "unittest.mock"
 

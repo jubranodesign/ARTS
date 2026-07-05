@@ -20,7 +20,8 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     # 1. שליפת חתיכות הטסטים וה-Dump מהחוקר
     raw_test_chunks = get_all_processed_tool_data(all_messages, filter_func=filter_only_successful_tests)
     raw_research = extract_message_by_content(all_messages, "### RESEARCH_DATA_DUMP ###")
-
+    print(f" raw_test_chunks: {raw_test_chunks}")
+        
     if not raw_research:
         print("❌ Critical Error: No '### RESEARCH_DATA_DUMP ###' found in Researcher history.")
         return {}

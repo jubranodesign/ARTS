@@ -176,7 +176,8 @@ def filter_only_successful_tests(search_results_string: str) -> str:
         full_res = "--- RESULT" + res
         
         # בדיקה שה-Chunk הוא גם טסט וגם עבר (Status passed)
-        if "IS_TEST: True" in full_res and "STATUS: passed" in full_res:
+        # if "IS_TEST: True" in full_res and "STATUS: passed" in full_res:
+        if "IS_TEST: True" in full_res:
             filtered_tests.append(full_res.strip())
 
     if not filtered_tests:

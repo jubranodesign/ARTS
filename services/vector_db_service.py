@@ -56,7 +56,8 @@ class VectorDBService:
             return "🔍 Database is currently empty."
 
         docs = self.db.similarity_search(query, k=k, filter=filter_dict)
-        
+        print(f"search_code docs: {docs}")
+
         formatted_results = []
         # for i, doc in enumerate(docs):
         #     source = doc.metadata.get("relative_path", "Unknown")
@@ -75,7 +76,7 @@ class VectorDBService:
           header = f"--- RESULT {i+1} | FILE: {source} | TYPE: {file_type} | IS_TEST: {is_test} | STATUS: {test_status} ---"
           des = f"DESCRIPTION: {doc.page_content}"
 
-        formatted_results.append(f"{header}\n{des}\n{source_code}" )
+          formatted_results.append(f"{header}\n{des}\n{source_code}" )
         print("search_code formatted_results: ")
         print("\n\n".join(formatted_results))
         return "\n\n".join(formatted_results)

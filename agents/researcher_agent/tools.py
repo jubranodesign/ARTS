@@ -116,39 +116,89 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
         print(f"❌ Error in search_dependencies_bm25: {str(e)}")
         return f"Error during dependency search: {str(e)}"
 
-@tool
-def search_golden_tests_semantic(query: str, search_type: str = "code_only", config: RunnableConfig = None) -> str:
-    """
-    Semantic search over the codebase to discover existing test patterns and "Golden Examples".
-    Use this tool ONLY to find how similar features, workflows, or code logic are tested elsewhere 
-    in the project.
+# @tool
+# def search_golden_tests_semantic(query: str, search_type: str = "tests_only", config: RunnableConfig = None) -> str:
+#     """
+#     Semantic search over the codebase to discover existing test patterns and "Golden Examples".
+#     Use this tool ONLY to find how similar features, workflows, or code logic are tested elsewhere 
+#     in the project.
     
-    Do NOT use this tool to find core file implementations or source code dependencies (use search_dependencies_bm25 instead).
+#     Do NOT use this tool to find core file implementations or source code dependencies (use search_dependencies_bm25 instead).
+    
+#     Args:
+#         query: Semantic description of the logic or test pattern you are looking for (e.g., 'how to test async web scrapers').
+#         search_type: Hardcoded to 'tests_only' to filter out production code and focus strictly on test files.
+    
+#     RETURNS: A formatted string of reference test code chunks.
+#     """
+#     print("search_golden_tests_semantic query ", query)
+#     try:
+#         vdb = config.get("configurable", {}).get("vdb") or VectorDBService()
+        
+#         # בניית ה-filter עבור ה-Service
+#         filter_dict = None
+#         if search_type == "tests_only":
+#             filter_dict = {"is_test": True}
+#         elif search_type == "code_only":
+#             filter_dict = {"is_test": False}
+
+#         print("filter_dict ", filter_dict)   
+#         # קריאה ל-Service עם ה-filter החדש
+#         return vdb.search_code(query, filter_dict=filter_dict)
+        
+#     except Exception as e:
+#         return f"Error searching the codebase: {str(e)}"
+
+@tool
+def search_golden_tests_semantic(query: str, config: RunnableConfig = None) -> str:
+    """
+    Semantic search over the test suite to discover existing test patterns and "Golden Examples" (Seed Data).
+    Use this tool ONLY to find how similar features, infrastructure workflows, or code logic are tested 
+    elsewhere in the project (e.g., how to mock context managers, database sessions, or third-party APIs).
+    
+    Do NOT use this tool to discover production/source code implementations.
     
     Args:
-        query: Semantic description of the logic or test pattern you are looking for (e.g., 'how to test async web scrapers').
-        search_type: Hardcoded to 'tests_only' to filter out production code and focus strictly on test files.
+        query: Semantic description of the testing pattern or mock architecture you need (e.g., 'mocking database context manager with block').
     
-    RETURNS: A formatted string of reference test code chunks.
+    RETURNS: A formatted string of reference test code chunks (Golden Seeds).
     """
-    print("search_golden_tests_semantic query ", query)
+    print("search_golden_tests_semantic query:", query)
     try:
         vdb = config.get("configurable", {}).get("vdb") or VectorDBService()
         
-        # בניית ה-filter עבור ה-Service
-        filter_dict = None
-        if search_type == "tests_only":
-            filter_dict = {"is_test": True}
-        elif search_type == "code_only":
-            filter_dict = {"is_test": False}
-
-        print("filter_dict ", filter_dict)   
-        # קריאה ל-Service עם ה-filter החדש
+        # 🎯 נעול קשיח במטא-דטה: מחפש אך ורק דוגמאות בדיקה ו-Seeds
+        filter_dict = {"is_test": True}
+        
         return vdb.search_code(query, filter_dict=filter_dict)
         
     except Exception as e:
-        return f"Error searching the codebase: {str(e)}"
+        return f"Error searching the golden tests: {str(e)}"
 
+@tool
+def search_source_code_semantic(query: str, config: RunnableConfig = None) -> str:
+    """
+    Semantic search over the production/source code repository to discover logical features and business logic.
+    Use this tool ONLY when you need to understand *what* the application logic achieves from a conceptual perspective
+    and a simple keyword search (BM25) is insufficient.
+    
+    Do NOT use this tool to find test examples or mock structures (use search_golden_tests_semantic instead).
+    
+    Args:
+        query: Semantic description of the functional business logic you are searching for (e.g., 'user authentication token generation').
+    
+    RETURNS: A formatted string of production code chunks.
+    """
+    print("search_source_code_semantic query:", query)
+    try:
+        vdb = config.get("configurable", {}).get("vdb") or VectorDBService()
+        
+        # 🎯 נעול קשיח במטא-דטה: מחפש אך ורק קוד מקור של האפליקציה
+        filter_dict = {"is_test": False}
+        
+        return vdb.search_code(query, filter_dict=filter_dict)
+        
+    except Exception as e:
+        return f"Error searching the source code: {str(e)}"
 
-
-RESEARCHER_TOOLS = [search_dependencies_bm25, search_golden_tests_semantic]
+RESEARCHER_TOOLS = [search_dependencies_bm25, search_golden_tests_semantic, search_source_code_semantic]

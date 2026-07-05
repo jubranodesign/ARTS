@@ -3,7 +3,7 @@ from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT
 from shared.config import get_model
 
 class CodeProcessor:
-    def __init__(self, provider: str = "groq"):
+    def __init__(self, provider: str = "groq", summary_prompt=CHUNK_SUMMARY_PROMPT):
         # 1. הגדרת החותך המומחה לפייתון (נשאר כפי שהיה)
         self.splitter = RecursiveCharacterTextSplitter.from_language(
             language=Language.PYTHON,
@@ -15,6 +15,7 @@ class CodeProcessor:
         # אנו מקבעים temperature=0 כדי להבטיח תיאורים עובדתיים, מדויקים ויציבים
         print(f"🤖 CodeProcessor initializing LLM for ingestion using provider: {provider}")
         self.llm = get_model(provider=provider, temperature=0)
+        self.summary_prompt = summary_prompt
 
     def process(self, documents):
         """
@@ -38,7 +39,7 @@ class CodeProcessor:
             
             try:
                 # 1. בניית הפרומפט עם קוד המקור הנוכחי
-                formatted_prompt = CHUNK_SUMMARY_PROMPT.format(code_content=original_code)
+                formatted_prompt = self.summary_prompt.format(code_content=original_code)
                 
                 # 2. פנייה ל-LLM לקבלת התיאור הסמנטי
                 response = self.llm.invoke(formatted_prompt)
