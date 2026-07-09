@@ -6,6 +6,7 @@ from typing import Tuple
 def run_pytest(
     full_path: str,
     repo_path: str,
+    env: dict[str, str] = None,  # <--- הגדרת הטיפוס כאן
     timeout: int = 60,
 ) -> Tuple[str, str]:
     """
@@ -21,6 +22,7 @@ def run_pytest(
             cwd=repo_path,
             capture_output=True,
             text=True,
+            env=env,
             timeout=timeout,
         )
 

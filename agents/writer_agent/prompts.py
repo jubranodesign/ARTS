@@ -60,11 +60,66 @@
 # Implement ALL {tc_count} functions now.
 # """
 
+# WRITER_PROMPT_TEMPLATE = """
+# ### ROLE:
+# You are a Senior Backend Developer and QA Automation Expert.
+# Your goal is to transform the provided Approved Test Plan into executable Pytest code that accurately reflects the provided SOURCE CODE and strictly replicates our architectural Golden Seeds.
+
+# ### CONTEXT:
+# - Target File: {target_file}
+# - Import Path: {import_path} 
+# - Destination Path: {test_file_path}
+# - Test Framework: pytest
+# - Mocking Tool: {mock_tool} (mocker fixture)
+
+# --- 1. SOURCE CODE, DEPENDENCIES & RISK CONTEXT ---
+# {architecture_summary}
+# (Note: Use this section to copy the exact function signatures, imports, and log prints of the target file and its dependencies.)
+
+# **--- 2. GOLDEN TEST EXAMPLES (MANDATORY REFERENCE SEEDS) ---**
+# **{golden_examples}**
+# **(Note: These are approved architectural code blueprints. You MUST copy their syntax structure exactly—especially for Context Manager chaining, path injection, and caplog assertions.)**
+
+# ### APPROVED TEST PLAN TO IMPLEMENT:
+# {plan}
+
+# ### WORKFLOW RULES:
+# 1. **SOURCE FIDELITY (CRITICAL)**: Review the ACTUAL code inside the data dump. Your tests must align with its exact logic and parameters.
+# 2. **STRICT PYTHON SYNTAX**: You are writing PURE, executable Python code. NEVER use block comments from other languages (like `/** ... */` or `//`). Use only the `#` character for Python comments. 
+# 3. **NO REASONING / NO CHAT**: Output ONLY the pure Python code block. Do not explain, do not write introductions ("Here is the code"), and do not write markdown text outside the code block.
+
+# ### ⛔ IMPORT & PATCHING RULES (STRICT ENFORCEMENT):
+# 1. **MANDATORY IMPORT SEQUENCE**:
+#    Your code MUST follow this exact clean sequence:
+#    a) Standard Python imports (e.g., `import pytest`, `from unittest.mock import MagicMock`).
+#    b) Third-party library imports (e.g., `from requests.exceptions import HTTPError, Timeout`).
+#    c) Absolute import of the target under test: `from {import_path} import ...`.
+
+# 2. **CRITICAL NAMESPACE & MOCKING RULES (PATCH WHERE USED)**:
+#    - **NEVER OVERWRITE SYS.MODULES**: Do NOT inject variables into `sys.modules`. Blanket-mocking internal packages freezes Python.
+#    - **PATCH WHERE USED (MANDATORY)**: Python mocks must be applied at the destination where they are LOOKED UP inside the file under test.
+#    - **Internal Functions Rule**: Patch internal dependencies via the target module's namespace. 
+#       Correct Paths: `{import_path}.create_db_and_tables` or `{import_path}.save_study`. Do NOT patch `common.db.create_db_and_tables`.
+#    - **Context Manager Chaining**: If the source code uses a `with` block for a database session, you MUST replicate the `return_value.__enter__.return_value` chaining pattern demonstrated in **Golden Seed #2** exactly.
+
+# 3. **SMART PATCHING PATHS & CAPTURE**:
+#    - **Third-Party Libraries Rule**: If a global library is imported directly (e.g., `import requests`), patch it globally without the file prefix: `mocker.patch('requests.get')`.
+#    - **Local Variable Assignment**: ALWAYS capture your patches in descriptive local variables (e.g., `mock_fetch = mocker.patch(...)`). 
+
+# 4. **STRICT LOGGING VERIFICATION (MANDATORY)**:
+#    - NEVER mock or patch the `logger` variable or `logger.error` directly.
+#    - To verify logs, ALWAYS add the native `caplog` fixture to the test function arguments and assert against `caplog.text` (e.g., `assert "text" in caplog.text`) as shown in the API Error Golden Seed.
+
+# FINAL INSTRUCTION:
+# Implement ALL {tc_count} functions now using strict Python syntax, absolute patching paths, and native caplog for log assertions. Start directly with the code block.
+# """
+
+
 
 WRITER_PROMPT_TEMPLATE = """
 ### ROLE:
 You are a Senior Backend Developer and QA Automation Expert.
-Your goal is to transform the provided Approved Test Plan into executable Pytest code that accurately reflects the provided SOURCE CODE.
+Your goal is to transform the provided Approved Test Plan into executable Pytest code that accurately reflects the provided SOURCE CODE and strictly replicates our architectural Golden Seeds.
 
 ### CONTEXT:
 - Target File: {target_file}
@@ -72,46 +127,96 @@ Your goal is to transform the provided Approved Test Plan into executable Pytest
 - Destination Path: {test_file_path}
 - Test Framework: pytest
 - Mocking Tool: {mock_tool} (mocker fixture)
-- Risk Context: {architecture_summary}
 
-### WORKFLOW RULES:
-1. **SOURCE FIDELITY (CRITICAL)**: Review the ACTUAL `SOURCE CODE`. Your tests must align with its logic. 
-2. **STRICT PYTHON SYNTAX**: You are writing PURE Python code. NEVER use block comments from other languages (like `/** ... */` or `//`). Use only the `#` character for Python comments. 
-3. **NO REASONING**: Just generate the code. Do not explain.
+--- 1. SOURCE CODE, DEPENDENCIES & RISK CONTEXT ---
+{architecture_summary}
+(Note: Use this section to copy the exact function signatures, imports, and log prints of the target file and its dependencies.)
 
-### ⛔ IMPORT & PATCHING RULES (STRICT ENFORCEMENT):
-1. **MANDATORY BOILERPLATE ORDER**:
-   Your code MUST follow this clean and native sequence. NEVER use sys.modules to blanket-mock packages:
-   a) Standard Python imports (e.g., `import pytest`, `from unittest.mock import MagicMock`).
-   b) Third-party library imports (e.g., `from requests.exceptions import HTTPError, Timeout`).
-   c) Absolute import of the target function/module under test: `from {import_path} import ...` (or import the target module directly).
+**--- 2. GOLDEN TEST EXAMPLES (MANDATORY REFERENCE SEEDS) ---**
+**{golden_examples}**
+**(Note: These are approved architectural code blueprints. You MUST copy their syntax structure exactly—especially for Context Manager chaining, path injection, and caplog assertions.)**
 
-2. **CRITICAL NAMESPACE & MOCKING RULES**:
-   - **NEVER OVERWRITE SYS.MODULES**: Do NOT inject `sys.modules['{root_package}']` or any internal project packages into `sys.modules`. Blanket-mocking internal packages freezes Python and prevents loading the source file.
-   - **PATCH WHERE USED (MANDATORY)**: Python mocks must be applied at the destination where they are LOOKED UP or USED inside the file under test, NOT where they are defined.
-   - **How to patch internal functions**: If the file under test imports and uses functions from internal modules (like `common.db` or `common.repositories`), you MUST patch them through the target module's namespace.
-     👉 Example path for patching: `{import_path}.create_db_and_tables` or `{import_path}.save_study`. Do NOT use `mocker.patch('common.db.create_db_and_tables')`.
-
-3. **SMART PATCHING PATHS & CAPTURE**:
-   - **Third-Party Libraries Rule**: If a global library is imported directly (e.g., `import requests`), patch it globally without the file prefix: `mocker.patch('requests.get', return_value=...)`.
-   - **Local Variable Assignment**: ALWAYS capture the patch in a unique, descriptive local variable (e.g., `mock_fetch = mocker.patch(...)`, `mock_create = mocker.patch(...)`). 
-   - **NO FIXTURE OVERLAPPING**: Avoid writing global autouse fixtures that patch the exact same lookup paths you override inside individual test cases. Keep mocks isolated or explicitly named.
-
-4. **STRICT LOGGING VERIFICATION (MANDATORY)**:
-   - NEVER mock or patch the `logger` variable or `logger.error` directly.
-   - To verify that an error was logged, ALWAYS add the native `caplog` fixture to the test function arguments and assert against `caplog.text`.
-   - Example: `assert "Timeout exceeded" in caplog.text`
-
-APPROVED TEST PLAN:
+### APPROVED TEST PLAN TO IMPLEMENT:
 {plan}
 
+### WORKFLOW RULES:
+1. **SOURCE FIDELITY (CRITICAL)**: Review the ACTUAL code inside the data dump. Your tests must align with its exact logic and parameters.
+2. **STRICT PYTHON SYNTAX**: You are writing PURE, executable Python code. NEVER use block comments from other languages (like `/** ... */` or `//`). Use only the `#` character for Python comments. 
+3. **NO REASONING / NO CHAT**: Output ONLY the pure Python code block. Do not explain, do not write introductions ("Here is the code"), and do not write markdown text outside the code block.
+
+### ⛔ IMPORT & PATCHING RULES (STRICT ENFORCEMENT):
+1. **MANDATORY IMPORT SEQUENCE**:
+   Your code MUST follow this exact clean sequence:
+   a) Standard Python imports (e.g., `import pytest`, `from unittest.mock import MagicMock`).
+   b) Third-party library imports (e.g., `from requests.exceptions import HTTPError, Timeout`).
+   c) Absolute import of the target under test: `from {import_path} import ...`.
+
+2. **CRITICAL NAMESPACE & MOCKING RULES (PATCH WHERE USED)**:
+   - **NEVER OVERWRITE SYS.MODULES**: Do NOT inject variables into `sys.modules`. Blanket-mocking internal packages freezes Python.
+   - **PATCH WHERE USED (MANDATORY)**: Python mocks must be applied at the destination where they are LOOKED UP inside the file under test.
+   - **Internal Functions Rule**: Patch internal dependencies via the target module's namespace. 
+     Correct Paths: `{import_path}.create_db_and_tables` or `{import_path}.save_study`. Do NOT patch `common.db.create_db_and_tables`.
+   - **Context Manager Chaining**: If the source code uses a `with` block for a database session, you MUST replicate the `return_value.__enter__.return_value` chaining pattern demonstrated in **Golden Seed #2** exactly.
+
+3. **SMART PATCHING PATHS & CAPTURE**:
+   - **Third-Party Libraries Rule**: If a global library is imported directly (e.g., `import requests`), patch it globally without the file prefix: `mocker.patch('requests.get')`.
+   - **Local Variable Assignment**: ALWAYS capture your patches in descriptive local variables (e.g., `mock_fetch = mocker.patch(...)`). 
+
+**4. STRICT LOGGING & PRINT VERIFICATION (MANDATORY):**
+{logging_rules}
+
 FINAL INSTRUCTION:
-Implement ALL {tc_count} functions now using strict Python syntax, absolute patching paths, and native caplog for log assertions. Do not include any sys.modules overrides.
+Implement ALL {tc_count} functions now using strict Python syntax, absolute patching paths, and the required fixtures from the logging/print rules. Start directly with the code block.
 """
 
 
+# WRITER_PROMPT_TEMPLATE = """
+# ### ROLE:
+# You are a Senior Backend Developer and QA Automation Expert.
+# Your goal is to transform the provided Approved Test Plan into executable Pytest code that accurately reflects the provided SOURCE CODE.
 
+# ### CONTEXT:
+# - Target File: {target_file}
+# - Import Path: {import_path} 
+# - Destination Path: {test_file_path}
+# - Test Framework: pytest
+# - Mocking Tool: {mock_tool} (mocker fixture)
+# - Risk Context: {architecture_summary}
 
+# ### WORKFLOW RULES:
+# 1. **SOURCE FIDELITY (CRITICAL)**: Review the ACTUAL `SOURCE CODE`. Your tests must align with its logic. 
+# 2. **STRICT PYTHON SYNTAX**: You are writing PURE Python code. NEVER use block comments from other languages (like `/** ... */` or `//`). Use only the `#` character for Python comments. 
+# 3. **NO REASONING**: Just generate the code. Do not explain.
+
+# ### ⛔ IMPORT & PATCHING RULES (STRICT ENFORCEMENT):
+# 1. **MANDATORY BOILERPLATE ORDER**:
+#    Your code MUST follow this clean and native sequence. NEVER use sys.modules to blanket-mock packages:
+#    a) Standard Python imports (e.g., `import pytest`, `from unittest.mock import MagicMock`).
+#    b) Third-party library imports (e.g., `from requests.exceptions import HTTPError, Timeout`).
+#    c) Absolute import of the target function/module under test: `from {import_path} import ...` (or import the target module directly).
+
+# 2. **CRITICAL NAMESPACE & MOCKING RULES**:
+#    - **NEVER OVERWRITE SYS.MODULES**: Do NOT inject `sys.modules['{root_package}']` or any internal project packages into `sys.modules`. Blanket-mocking internal packages freezes Python and prevents loading the source file.
+#    - **PATCH WHERE USED (MANDATORY)**: Python mocks must be applied at the destination where they are LOOKED UP or USED inside the file under test, NOT where they are defined.
+#    - **How to patch internal functions**: If the file under test imports and uses functions from internal modules (like `common.db` or `common.repositories`), you MUST patch them through the target module's namespace.
+#      👉 Example path for patching: `{import_path}.create_db_and_tables` or `{import_path}.save_study`. Do NOT use `mocker.patch('common.db.create_db_and_tables')`.
+
+# 3. **SMART PATCHING PATHS & CAPTURE**:
+#    - **Third-Party Libraries Rule**: If a global library is imported directly (e.g., `import requests`), patch it globally without the file prefix: `mocker.patch('requests.get', return_value=...)`.
+#    - **Local Variable Assignment**: ALWAYS capture the patch in a unique, descriptive local variable (e.g., `mock_fetch = mocker.patch(...)`, `mock_create = mocker.patch(...)`). 
+#    - **NO FIXTURE OVERLAPPING**: Avoid writing global autouse fixtures that patch the exact same lookup paths you override inside individual test cases. Keep mocks isolated or explicitly named.
+
+# 4. **STRICT LOGGING VERIFICATION (MANDATORY)**:
+#    - NEVER mock or patch the `logger` variable or `logger.error` directly.
+#    - To verify that an error was logged, ALWAYS add the native `caplog` fixture to the test function arguments and assert against `caplog.text`.
+#    - Example: `assert "Timeout exceeded" in caplog.text`
+
+# APPROVED TEST PLAN:
+# {plan}
+
+# FINAL INSTRUCTION:
+# Implement ALL {tc_count} functions now using strict Python syntax, absolute patching paths, and native caplog for log assertions. Do not include any sys.modules overrides.
+# """
 
 
 

@@ -5,7 +5,8 @@ from agents.writer_agent.prompts import WRITER_PROMPT_TEMPLATE
 from agents.writer_agent.tools import WRITER_TOOLS
 from graph.state import AgentState
 from shared.config import REPO_PATH, TEST_FRAMEWORK, MOCK_TOOL, setup_node_llm
-from utils.utils import build_agent_messages, count_test_cases_from_list, get_import_path, get_test_path, parse_architecture_summary
+from shared.logging_rules import SHARED_LOGGING_RULES
+from utils.utils import build_agent_messages, count_test_cases_from_list, get_import_path, get_test_path
 
 def call_writer(state: AgentState, config: RunnableConfig):
     # 1. שליפת ההיסטוריה מה-State
@@ -40,12 +41,10 @@ def call_writer(state: AgentState, config: RunnableConfig):
     test_file_path = get_test_path(target_file)
     plan_text = state.get("test_plan", "")
     tc_count = count_test_cases_from_list(plan_text)
-    summary_text = state.get("architecture_summary", "")
-    parsed_summary = parse_architecture_summary(summary_text)
-    golden_example = parsed_summary.get("golden_example", "No reference pattern found.")
     architecture_summary = state.get("architecture_summary", "No summary available")
+    golden_test_summary = state.get("golden_test_summary", "No golden test summary available")
 
-    print("call_writer golden_example: ", golden_example)
+    print("call_writer golden_example: ", golden_test_summary)
     
     root_package = target_file.split('/')[0] if '/' in target_file else ""
     print("root_package: ", root_package)
@@ -60,10 +59,11 @@ def call_writer(state: AgentState, config: RunnableConfig):
         mock_tool=MOCK_TOOL,
         import_path=import_path,
         tc_count=tc_count,
-        golden_example=golden_example,
+        golden_examples=golden_test_summary,
         architecture_summary=architecture_summary,
-        root_package=root_package
+        logging_rules=SHARED_LOGGING_RULES
     )
+    
     system_msg = SystemMessage(content=full_prompt + f"\n\nCRITICAL: Implement ALL {tc_count} cases identified.")
 
     if state.get("test_run_status") == "failed":

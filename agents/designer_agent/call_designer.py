@@ -4,6 +4,7 @@ from agents.designer_agent.prompts import DESIGNER_PROMPT_TEMPLATE
 from agents.shared.agent_tools import AGENT_TOOLS
 from graph.state import AgentState
 from shared.config import setup_node_llm
+from shared.logging_rules import SHARED_LOGGING_RULES
 from utils.utils import build_agent_messages
 
 
@@ -13,13 +14,16 @@ def call_designer(state: AgentState, config: RunnableConfig):
 
     # 2. שליפת נתונים בסיסיים מה-State
     architecture_summary = state.get("architecture_summary", "No summary available")
+    golden_test_summary = state.get("golden_test_summary", "No golden test summary available")
     user_input = state.get("user_input", "")
-    target_file = state.get("target_file") # וודא שזה קיים ב-State
+    target_file = state.get("target_file") 
 
     # 3. בניית ה-System Message (ה-Prompt המועשר)
     enriched_prompt_content = DESIGNER_PROMPT_TEMPLATE.format(
         architecture_summary=architecture_summary,
-        user_input=user_input
+        golden_examples=golden_test_summary,
+        user_input=user_input,
+        logging_rules=SHARED_LOGGING_RULES,
     )
     system_msg = SystemMessage(content=enriched_prompt_content)
 
