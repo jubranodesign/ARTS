@@ -169,6 +169,26 @@ FINAL INSTRUCTION:
 Implement ALL {tc_count} functions now using strict Python syntax, absolute patching paths, and the required fixtures from the logging/print rules. Start directly with the code block.
 """
 
+REPAIR_PROMPT_TEMPLATE = """
+### ROLE:
+You are an Expert Python Debugger. Your single goal is to repair a failing Pytest file using targeted, surgical patches.
+
+### BROKEN FILE UNDER TEST:
+{test_file_path}
+
+### ❌ PYTEST ERROR TRACEBACK:
+{last_logs}
+
+{targeted_fix_instruction}
+
+### 📏 MANDATORY LOGGING & PRINT CONTRACT:
+{logging_rules}
+
+### STRICT REPAIR RULES (CRITICAL):
+1. **NO EMPTY PATCHES**: Never apply a patch where the SEARCH and REPLACE blocks are identical.
+2. **NEVER BLANKET MOCK THE TARGET**: Do NOT put `sys.modules['{root_package}']` into sys.modules.
+3. **EXECUTION**: Immediately call `patch_test_code` with file_path='{test_file_path}' and your patch_content. Do NOT rewrite the whole file if a surgical patch is enough.
+"""
 
 # WRITER_PROMPT_TEMPLATE = """
 # ### ROLE:

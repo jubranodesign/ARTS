@@ -1,94 +1,132 @@
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langgraph.graph.state import RunnableConfig
 from agents.shared.agent_tools import AGENT_TOOLS
-from agents.writer_agent.prompts import WRITER_PROMPT_TEMPLATE
+from agents.writer_agent.prompts import REPAIR_PROMPT_TEMPLATE, WRITER_PROMPT_TEMPLATE
 from agents.writer_agent.tools import WRITER_TOOLS
 from graph.state import AgentState
 from shared.config import REPO_PATH, TEST_FRAMEWORK, MOCK_TOOL, setup_node_llm
 from shared.logging_rules import SHARED_LOGGING_RULES
 from utils.utils import build_agent_messages, count_test_cases_from_list, get_import_path, get_test_path
+from utils.failure_analyzer import analyze_test_failure
+
 
 def call_writer(state: AgentState, config: RunnableConfig):
     # 1. שליפת ההיסטוריה מה-State
     messages = state.get("messages", [])
-    
-    # --- בדיקת עצירה (אם הכתיבה הצליחה) ---
+
+    # --- בדיקת עצירה (אם הכתיבה/התיקון הצליחו) ---
     if messages and isinstance(messages[-1], ToolMessage):
         last_tool_msg = messages[-1]
         print("last_tool_msg.name ", last_tool_msg.name)
 
         if last_tool_msg.name == "patch_test_code":
-         print("last_tool_msg.content ", last_tool_msg.content)
+            print("last_tool_msg.content ", last_tool_msg.content)
 
         # א) טיפול במצב של כתיבת קובץ מלא מושלמת
-        if last_tool_msg.name == "write_local_file" and "SUCCESS" in last_tool_msg.content.upper():
-            return {"messages": [AIMessage(content="Test file has been saved successfully. Task complete.")]}
-        
-        # ב) טיפול במצב של Patch כירורגי מוצלח - משחרר את הנעילה ומחזיר ל-Executor
-        if last_tool_msg.name == "patch_test_code" and "SUCCESSFULLY" in last_tool_msg.content.upper():
-            print("🔄 Patch applied successfully! Resetting state status and routing to executor...")
+        if (
+            last_tool_msg.name == "write_local_file"
+            and "SUCCESS" in last_tool_msg.content.upper()
+        ):
             return {
-                "messages": [AIMessage(content="I have successfully applied the patch to the test file. Routing back to execution.")],
-                "test_run_status": "pending"  # 👈 מאפס את הסטטוס כדי לא להיתקע בלופ ה-failed
+                "messages": [
+                    AIMessage(
+                        content="Test file has been saved successfully. Task complete."
+                    )
+                ]
             }
 
-    # 2. הגדרת ה-LLM (לפי ההמלצה: Qwen-2.5-32b לביצוע מדויק של Mocks)
-    llm = setup_node_llm(config, AGENT_TOOLS + WRITER_TOOLS) 
-    
-    # 3. חילוץ נתונים
+        # ב) טיפול במצב של Patch כירורגי מוצלח - מאפס סטטוס ומחזיר ל-Executor
+        if (
+            last_tool_msg.name == "patch_test_code"
+            and "SUCCESSFULLY" in last_tool_msg.content.upper()
+        ):
+            print(
+                "🔄 Patch applied successfully! Resetting state status and"
+                " routing to executor..."
+            )
+            return {
+                "messages": [
+                    AIMessage(
+                        content=(
+                            "I have successfully applied the patch to the test"
+                            " file. Routing back to execution."
+                        )
+                    )
+                ],
+                "test_run_status": (
+                    "pending"  # 👈 מאפס את הסטטוס כדי לא להיתקע בלופ ה-failed
+                ),
+            }
+
+    # 2. הגדרת ה-LLM
+    llm = setup_node_llm(config, AGENT_TOOLS + WRITER_TOOLS)
+
+    # 3. חילוץ נתונים בסיסיים
     target_file = state.get("target_file")
     import_path = get_import_path(target_file)
     test_file_path = get_test_path(target_file)
-    plan_text = state.get("test_plan", "")
-    tc_count = count_test_cases_from_list(plan_text)
-    architecture_summary = state.get("architecture_summary", "No summary available")
-    golden_test_summary = state.get("golden_test_summary", "No golden test summary available")
+    root_package = target_file.split("/")[0] if "/" in target_file else ""
 
-    print("call_writer golden_example: ", golden_test_summary)
-    
-    root_package = target_file.split('/')[0] if '/' in target_file else ""
     print("root_package: ", root_package)
 
-    # 4. בניית ה-System Message (ה-Prompt המלא)
-    full_prompt = WRITER_PROMPT_TEMPLATE.format(
-        repo_path=REPO_PATH,
-        target_file=target_file,
-        test_file_path=test_file_path,
-        plan=plan_text,
-        framework=TEST_FRAMEWORK,
-        mock_tool=MOCK_TOOL,
-        import_path=import_path,
-        tc_count=tc_count,
-        golden_examples=golden_test_summary,
-        architecture_summary=architecture_summary,
-        logging_rules=SHARED_LOGGING_RULES
-    )
-    
-    system_msg = SystemMessage(content=full_prompt + f"\n\nCRITICAL: Implement ALL {tc_count} cases identified.")
-
+    # 4. פיצול מסלולים: Repair Mode (כישלון) מול Initial Generation (ריצה ראשונה)
     if state.get("test_run_status") == "failed":
-        last_logs = state.get('last_run_logs', '')
+        last_logs = state.get("last_run_logs", "")
 
-        import_crash_hint = ""
-        # 🎯 הרחבת התנאי: בודק אם השגיאה קשורה לחבילת האב או לנתיב האימפורט הישיר
-        if "ModuleNotFoundError" in last_logs and root_package in last_logs:
-            import_crash_hint = (
-                f"🚨 CRITICAL DIAGNOSIS: The ModuleNotFoundError is caused BECAUSE you blocked the source package in sys.modules!\n"
-                f"You MUST create a SEARCH/REPLACE block to DELETE any lines assigning `sys.modules['{root_package}']` or `sys.modules['{import_path}']` from the top of the file immediately!\n"
-                f"Never blanket-mock the current package under test, as it prevents python from loading the target file.\n\n"
-            )
-            
-        instruction = (
-            f"🚨 TEST FAILED.\n"
-            f"❌ PYTEST ERROR LOGS:\n{last_logs}\n\n"
-            f"{import_crash_hint}" # מוזרק דינמית לכל שירות/תיקייה
-            f"STRICT REPAIR RULES (CRITICAL):\n"
-            f"1. **NO EMPTY PATCHES**: Never apply a patch where the SEARCH and REPLACE blocks are identical.\n"
-            f"2. **NEVER BLANKET MOCK THE TARGET**: Do NOT put `sys.modules['{root_package}']` into sys.modules.\n"
-            f"3. **EXECUTION**: Immediately call `patch_test_code` with file_path='{test_file_path}' and your patch_content.\n"
+        # 🎯 שליפת דיאגנוזה ממוקדת והוראות תיקון מה-Util
+        targeted_fix_instruction = analyze_test_failure(
+            last_logs, root_package, import_path
         )
+
+        system_prompt = REPAIR_PROMPT_TEMPLATE.format(
+                test_file_path=test_file_path,
+                last_logs=last_logs,
+                targeted_fix_instruction=targeted_fix_instruction,
+                root_package=root_package,
+                logging_rules=SHARED_LOGGING_RULES,
+            )
+
+        system_msg = SystemMessage(content=system_prompt)
+
+        instruction = (
+             f"🚨 TEST FAILED.\n"
+            f"Do NOT generate explanation text or conversation. You MUST IMMEDIATELY call the `patch_test_code` tool to fix the syntax/logic error in file: {test_file_path}."
+         )
+
     else:
-        # 🎯 שים לב להזחה (Tab) פנימה! עכשיו זה ירוץ אך ורק בריצה הראשונה
+        # 🟢 מסלול כתיבה ראשונית
+        plan_text = state.get("test_plan", "")
+        tc_count = count_test_cases_from_list(plan_text)
+        architecture_summary = state.get(
+            "architecture_summary", "No summary available"
+        )
+        golden_test_summary = state.get(
+            "golden_test_summary", "No golden test summary available"
+        )
+
+        print("call_writer golden_example: ", golden_test_summary)
+
+        full_prompt = WRITER_PROMPT_TEMPLATE.format(
+            repo_path=REPO_PATH,
+            target_file=target_file,
+            test_file_path=test_file_path,
+            plan=plan_text,
+            framework=TEST_FRAMEWORK,
+            mock_tool=MOCK_TOOL,
+            import_path=import_path,
+            tc_count=tc_count,
+            golden_examples=golden_test_summary,
+            architecture_summary=architecture_summary,
+            logging_rules=SHARED_LOGGING_RULES,
+        )
+
+        system_msg = SystemMessage(
+            content=(
+                full_prompt
+                + f"\n\nCRITICAL: Implement ALL {tc_count} cases identified."
+            )
+        )
+
         instruction = (
             f"I see the source code. STOP REASONING NOW.\n"
             f"TASK: Implement the Approved Test Plan based on the ACTUAL source code provided.\n\n"
@@ -100,23 +138,21 @@ def call_writer(state: AgentState, config: RunnableConfig):
             f"5. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone Pytest functions.\n"
             f"6. **EXECUTION**: IMMEDIATELY call `write_local_file` with complete code to: {test_file_path}.\n"
         )
-    # 6. שימוש ב-Helper האחיד (מטפל ב-Trim ובמניעת לופים)
+
+    # 5. בניית ההודעות והפעלת ה-LLM
     input_messages = build_agent_messages(
         state=state,
         system_msg=system_msg,
         target_file=target_file,
         execute_instruction=instruction,
-        llm=llm
+        llm=llm,
     )
 
-    # דיבאג לפורמט
     print(f"DEBUG: Writer node - Messages count: {len(input_messages)}")
-    print(f"DEBUG: Sequence types: {[type(m).__name__ for m in input_messages]}")
+    print(
+        f"DEBUG: Sequence types: {[type(m).__name__ for m in input_messages]}"
+    )
 
-    # 7. הפעלה
     response = llm.invoke(input_messages)
-    
-    return {
-        "messages": [response],
-        "test_file_path": test_file_path
-    }
+
+    return {"messages": [response], "test_file_path": test_file_path}
