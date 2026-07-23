@@ -63,14 +63,14 @@ from shared.ingestion_prompts import SEED_SUMMARY_PROMPT, CHUNK_SUMMARY_PROMPT
 #     except Exception as e:
 #         print(f"❌ An unexpected error occurred: {e}")
 
-def run_ingestion(provider="mistral", prompt=CHUNK_SUMMARY_PROMPT, is_test=False, repo_path=REPO_PATH):
+def run_ingestion(provider="mistral", prompt=CHUNK_SUMMARY_PROMPT, is_test=False, repo_path=REPO_PATH, vdb=None, processor=None):
     print("--- 🏁 The script has started! ---")
     print(f"🚀 Starting ingestion for: {repo_path} (Mode: {'Test/Seed' if is_test else 'Source Code'})")
 
     scanner = CodeScanner()
     factory = DocumentFactory()
-    processor = CodeProcessor(provider=provider, summary_prompt=prompt)
-    db_service = VectorDBService()
+    proc = processor or CodeProcessor(provider=provider, summary_prompt=prompt)
+    db_service = vdb or VectorDBService()
 
     try:
         # שלב א': סריקה ויצירת מסמכי בסיס
@@ -78,7 +78,7 @@ def run_ingestion(provider="mistral", prompt=CHUNK_SUMMARY_PROMPT, is_test=False
         documents = [factory.create_document(p, root_path, is_test=is_test) for p in file_paths if factory.create_document(p, root_path)]
 
         # שלב ב': חיתוך חכם והעשרה סמנטית (Multi-Vector)
-        chunks = processor.process(documents)
+        chunks = proc.process(documents)
         
         # הדפסת דוח Chunks (הוצא לקובץ חיצוני)
         print_chunks_summary(chunks)
@@ -122,7 +122,16 @@ def run_ingestion(provider="mistral", prompt=CHUNK_SUMMARY_PROMPT, is_test=False
 
 if __name__ == "__main__":
     # run_ingestion(provider="mistral", prompt=CHUNK_SUMMARY_PROMPT, is_test=False, repo_path=REPO_PATH)
-    run_ingestion(provider="mistral", prompt=SEED_SUMMARY_PROMPT, is_test=True, repo_path=REPO_SEED_PATH)
+    vdb = VectorDBService()
+    processor = CodeProcessor(provider="mistral", summary_prompt=SEED_SUMMARY_PROMPT)
+    run_ingestion(
+        provider="mistral",
+        prompt=SEED_SUMMARY_PROMPT,
+        is_test=True,
+        repo_path=REPO_SEED_PATH,
+        vdb=vdb,
+        processor=processor,
+    )
 #     import pickle
 
 # # 1. טען את קובץ ה-pkl הנוכחי שלך מהדיסק

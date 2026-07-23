@@ -3,7 +3,7 @@ from evaluation.retrieval.datasets import test_set
 from evaluation.retrieval.metrics import evaluate_retrieval
 from services.vector_db_service import VectorDBService
 
-def run_retrieval_suite():
+def run_retrieval_suite(vdb=None):
     """
     מריץ סדרת בדיקות על שכבת השליפה (Retrieval) של הפרויקט.
     """
@@ -11,7 +11,7 @@ def run_retrieval_suite():
 
     # 1. התחברות ל-Vector Store הקיים שלך
     # וודא שהפונקציה הזו מחזירה את ה-vstore המאופלח של Chroma
-    vstore = VectorDBService()
+    vstore = vdb or VectorDBService()
 
     # 3. הרצת ההערכה
     try:

@@ -156,15 +156,14 @@ def run_test_system_stream():
     processor = CodeProcessor()
     thread_id = "test_invoke_session_001"
     config = {
-       "vdb": vdb_instance,
-      "processor": processor,
-      "configurable": 
-              {
-                "thread_id": thread_id, 
-                 "model_provider": "mistral", 
-                 "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories."
-              }
-           }
+        "configurable": {
+            "thread_id": thread_id,
+            "model_provider": "mistral",
+            "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories.",
+            "vdb": vdb_instance,
+            "processor": processor,
+        }
+    }
 
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)
@@ -295,8 +294,16 @@ def run_test_system_stream():
 def run_test_system():
     # 1. הגדרות בסיס
     vdb_instance = VectorDBService()
+    processor = CodeProcessor()
     thread_id = "test_invoke_session_001"
-    config = {"vdb": vdb_instance, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
+    config = {
+        "configurable": {
+            "thread_id": thread_id,
+            "model_provider": "groq",
+            "vdb": vdb_instance,
+            "processor": processor,
+        }
+    }
     user_task = "Write a comprehensive test for the scraper service, focusing on data validation."
 
     print(f"🚀 Starting Test Agent System (STRICT INVOKE MODE)")

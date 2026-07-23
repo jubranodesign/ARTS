@@ -6,7 +6,6 @@ from langchain_core.runnables import RunnableConfig
 from rich.console import Console
 from rich.table import Table as RichTable
 from graph.state import AgentState
-from services.vector_db_service import VectorDBService
 from shared.config import DATA_DIR
 
 
@@ -165,7 +164,7 @@ def search_golden_tests_semantic(query: str, config: RunnableConfig = None) -> s
     """
     print("search_golden_tests_semantic query:", query)
     try:
-        vdb = config.get("configurable", {}).get("vdb") or VectorDBService()
+        vdb = config["configurable"]["vdb"]
         
         # 🎯 נעול קשיח במטא-דטה: מחפש אך ורק דוגמאות בדיקה ו-Seeds
         filter_dict = {"is_test": True}
@@ -191,7 +190,7 @@ def search_source_code_semantic(query: str, config: RunnableConfig = None) -> st
     """
     print("search_source_code_semantic query:", query)
     try:
-        vdb = config.get("configurable", {}).get("vdb") or VectorDBService()
+        vdb = config["configurable"]["vdb"]
         
         # 🎯 נעול קשיח במטא-דטה: מחפש אך ורק קוד מקור של האפליקציה
         filter_dict = {"is_test": False}
