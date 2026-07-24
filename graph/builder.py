@@ -6,7 +6,6 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from agents.designer_agent.call_reviewer import call_reviewer
 from agents.designer_agent.final_cleaner_designer import final_cleaner_designer
-from agents.designer_agent.update_investigated_files import update_investigated_files
 from agents.designer_agent.call_designer import call_designer
 from agents.executor_agent.save_test_node import save_test_node
 from agents.executor_agent.call_executor import call_executor
@@ -34,7 +33,6 @@ workflow.add_node("researcher_tools", ToolNode(RESEARCHER_TOOLS))
 workflow.add_node("summarizer", summarize_architecture)
 workflow.add_node("designer", call_designer)
 workflow.add_node("designer_tools", ToolNode(AGENT_TOOLS))
-workflow.add_node("update_investigated_files", update_investigated_files)
 workflow.add_node("reviewer", call_reviewer)
 workflow.add_node("reviewer_tools", ToolNode(AGENT_TOOLS))
 workflow.add_node("final_cleaner_designer", final_cleaner_designer)
@@ -68,8 +66,6 @@ workflow.add_edge("researcher_tools", "researcher")
 
 workflow.add_edge("summarizer", "designer")
 workflow.add_edge("designer_tools", "designer")
-# workflow.add_edge("designer_tools", "update_investigated_files")
-# workflow.add_edge("update_investigated_files", "designer")
 
 workflow.add_conditional_edges(
     "designer",

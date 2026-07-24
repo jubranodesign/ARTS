@@ -242,10 +242,6 @@ def run_test_system_stream():
                     if safe_content:
                         console.print(Panel(Markdown(safe_content), title="💻 Generated Python Code", border_style="blue"))
 
-            # --- UPDATE_INVESTIGATED_FILES ---
-            elif node_name == "update_investigated_files":
-                console.print(f"📂 Investigated so far: {output.get('investigated_files')}")
-
              # --- EXECUTOR (סוכן הריצה) ---
             elif node_name == "executor":
                 status = output.get("test_run_status", "unknown")

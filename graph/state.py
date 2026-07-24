@@ -1,6 +1,4 @@
-import operator
-from typing_extensions import TypedDict 
-from typing import Annotated, Sequence, Literal
+from typing_extensions import TypedDict from typing import Annotated, Sequence, Literal
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
@@ -9,9 +7,7 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     
     user_input: str
-    # investigated_files: set[str]
-#     investigated_files: Annotated[list[str], operator.add]
-    # investigated_files: Annotated[set[str], operator.or_]
+
     # --- שדות הזיכרון (הסיכום המתגלגל) ---
     architecture_summary: str  # שלב החוקר
 

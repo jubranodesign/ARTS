@@ -45,5 +45,7 @@ include = [
     "shared*",
     "services*",
     "utils*",
+    "ml_predictor*",
+    "evaluation*",
 ]
 namespaces = true
