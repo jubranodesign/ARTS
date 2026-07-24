@@ -2,13 +2,14 @@ from pathlib import Path
 from langgraph.graph.state import RunnableConfig
 from graph.state import AgentState
 from services.document_factory import DocumentFactory
+from utils.repo_files import resolve_repo_file
+
 
 def save_test_node(state: AgentState, config: RunnableConfig):
 
     repo_path = config["configurable"]["repo_path"]
     db_service = config["configurable"]["vdb"]
     processor = config["configurable"]["processor"]
-
     # 1. בדיקה שהטסט באמת עבר ב-State
     if state.get("test_run_status") != "passed":
         return state
@@ -18,7 +19,7 @@ def save_test_node(state: AgentState, config: RunnableConfig):
     if not rel_path:
         return state
         
-    full_path = Path(repo_path) / rel_path
+    full_path = Path(resolve_repo_file(repo_path, rel_path))
     root_path = Path(repo_path)
 
     # 3. הקריאה המדויקת ל-Factory

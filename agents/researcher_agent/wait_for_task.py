@@ -1,7 +1,8 @@
 from langgraph.graph.state import RunnableConfig
 from graph.state import AgentState
 from ml_predictor.utils import predict_risk
-from utils.paths import extract_python_path, get_safe_full_path
+from utils.paths import extract_python_path
+from utils.repo_files import read_repo_text
 
 
 # def wait_for_task(state: AgentState):
@@ -16,10 +17,7 @@ def wait_for_task(state: AgentState, config: RunnableConfig):
     # נניח שתוכן הקובץ נמצא ב-state או שאנחנו קוראים אותו מנתיב
     user_task = state.get("user_input")
     target_file = extract_python_path(user_task)
-    full_path = get_safe_full_path(repo_path, target_file)
-
-    with open(full_path, 'r', encoding='utf-8') as f:
-        code_content = f.read()
+    code_content = read_repo_text(repo_path, target_file)
 
     risk, top_reasons = predict_risk(code_content)
     

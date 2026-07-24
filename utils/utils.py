@@ -13,6 +13,7 @@ from utils.paths import (
     get_import_path,
     get_safe_full_path,
     get_test_path,
+    normalize_relative_path,
 )
 from utils.state import count_test_cases_from_list, parse_architecture_summary
 from utils.testing import run_pytest
@@ -25,6 +26,7 @@ __all__ = [
     "get_import_path",
     "get_safe_full_path",
     "get_test_path",
+    "normalize_relative_path",
     "get_trimmed_messages",
     "run_pytest",
     "filter_only_successful_tests",

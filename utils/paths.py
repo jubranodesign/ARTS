@@ -20,6 +20,14 @@ def extract_python_path(text: str) -> str:
     return "unknown_file.py"
 
 
+def normalize_relative_path(path: str, *, lowercase: bool = False) -> str:
+    """Normalize repo-relative paths (forward slashes; optional lowercase for comparison)."""
+    if not path:
+        return ""
+    normalized = path.replace("\\", "/").strip()
+    return normalized.lower() if lowercase else normalized
+
+
 def get_safe_full_path(base_path: str, relative_path: str) -> str:
     """
     מנקה נתיב שניתן על ידי ה-AI ומחבר אותו לנתיב הבסיס בצורה בטוחה.
@@ -37,7 +45,7 @@ def get_test_path(target_file: str) -> str:
     ממיר נתיב של קובץ מקור לנתיב של קובץ טסט.
     דוגמה: scraper/api.py -> tests/scraper/test_api.py
     """
-    clean_path = target_file.replace("\\", "/")
+    clean_path = normalize_relative_path(target_file)
 
     parts = clean_path.split("/")
     folder = "/".join(parts[:-1])
@@ -56,6 +64,6 @@ def get_import_path(target_file: str) -> str:
     if not target_file:
         return ""
 
-    path_without_ext = os.path.splitext(target_file)[0]
-    import_path = path_without_ext.replace("/", ".").replace("\\", ".")
+    path_without_ext = os.path.splitext(normalize_relative_path(target_file))[0]
+    import_path = path_without_ext.replace("/", ".")
     return import_path.strip(".")

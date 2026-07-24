@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table as RichTable
 from graph.state import AgentState
 from shared.config import DATA_DIR
+from utils.paths import normalize_relative_path
 
 
 # @tool
@@ -65,12 +66,13 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
         # 5. לוגיקת פילטור כירורגית ונרמול סלאשים (Windows vs Linux)
         best_match = None
         # הופכים את scraper_service/scraper_api.py לקו אחיד ב-lower case
-        normalized_target = target_file.replace("\\", "/").lower() if target_file else ""
+        normalized_target = normalize_relative_path(target_file, lowercase=True)
         print("normalized_target: ", normalized_target)
         
         for doc in results:
-            # הופכים את scraper_service\\scraper_api.py לקו אחיד ב-lower case
-            doc_path = doc.metadata.get("relative_path", "").replace("\\", "/").lower()
+            doc_path = normalize_relative_path(
+                doc.metadata.get("relative_path", ""), lowercase=True
+            )
             
             # בדיקת התאמה: אם מדובר באותו הקובץ הנוכחי שהחוקר מנתח - מדלגים עליו!
             if normalized_target and (normalized_target in doc_path or doc_path in normalized_target):

@@ -2,15 +2,12 @@ from langchain_core.messages import SystemMessage
 from langgraph.graph.state import RunnableConfig
 from agents.researcher_agent.prompts import RESEARCHER_SYSTEM_PROMPT
 from agents.researcher_agent.tools import RESEARCHER_TOOLS
-from agents.shared.agent_tools import read_local_file
-from evaluation.llm_judge.eval_utils import evaluate_with_custom_judge
-from evaluation.llm_judge.researcher_agent.model import ResearcherJudgment
-from evaluation.llm_judge.researcher_agent.prompt import RESEARCHER_RUBRIC
-from evaluation.rag.eval_utils import evaluate_quality
 from graph.state import AgentState
 from shared.config import setup_node_llm
+from utils.paths import extract_python_path
+from utils.repo_files import read_repo_text_tool_response
 from utils.state import format_risk_context
-from utils.utils import get_trimmed_messages, extract_python_path
+from utils.utils import get_trimmed_messages
 
 # הצמדת הכלים למופע המשותף
 
@@ -29,15 +26,8 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     # אם הוא לא קיים (סיבוב ראשון בלבד!), נקרא אותו עכשיו
     if not target_file_content:
         if target_file:
-            # כאן אנחנו משתמשים בפונקציה שלך, אבל מעבירים לה את הנתיב האמיתי!
-            # הערה: אם read_local_file היא כלי של לנגצ'יין, אפשר לקרוא ללוגיקה הפנימית שלה 
-            # או להפעיל אותה כך אם היא פונקציה פשוטה:
-            try:
-                # מפעילים את פונקציית הכלים שלך עם הנתיב האמיתי שחילקנו
-                target_file_content = read_local_file.invoke({"file_path": target_file})
-            except Exception:
-                # למקרה שהיא פונקציית פייתון רגילה ולא קראת לה דרך .invoke()
-                target_file_content = read_local_file(target_file)
+            repo_path = config["configurable"]["repo_path"]
+            target_file_content = read_repo_text_tool_response(repo_path, target_file)
         else:
             target_file_content = "No target file path detected."
             
