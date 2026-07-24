@@ -4,6 +4,7 @@ from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from graph.builder import app
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService # הייבוא של הגרף המקומפל מה-Builder
+from shared.config import REPO_PATH
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -162,6 +163,7 @@ def run_test_system_stream():
             "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories.",
             "vdb": vdb_instance,
             "processor": processor,
+            "repo_path": REPO_PATH,
         }
     }
 
@@ -302,6 +304,7 @@ def run_test_system():
             "model_provider": "groq",
             "vdb": vdb_instance,
             "processor": processor,
+            "repo_path": REPO_PATH,
         }
     }
     user_task = "Write a comprehensive test for the scraper service, focusing on data validation."

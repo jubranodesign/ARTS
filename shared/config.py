@@ -10,10 +10,10 @@ from langchain_mistralai import ChatMistralAI
 
 load_dotenv()
 
-# 2. הגדרות נתיבים
-# כאן אתה שם את הנתיב לפרויקט שאתה רוצה לסרוק
-REPO_PATH = r"C:\Users\Remah\OneDrive\Documents\interview\coveredhealth"
-REPO_SEED_PATH = r"C:\Users\Remah\OneDrive\Documents\interview\coveredhealth\seed_data"
+# 2. הגדרות נתיבים (override in .env: REPO_PATH, REPO_SEED_PATH — plain paths, not r"..." syntax)
+_DEFAULT_REPO_PATH = r"C:\Users\Remah\OneDrive\Documents\interview\coveredhealth"
+REPO_PATH = os.getenv("REPO_PATH", _DEFAULT_REPO_PATH)
+REPO_SEED_PATH = os.getenv("REPO_SEED_PATH", os.path.join(REPO_PATH, "seed_data"))
 TEST_FRAMEWORK = "pytest"
 MOCK_TOOL = "unittest.mock"
 

@@ -2,11 +2,10 @@ from pathlib import Path
 from langgraph.graph.state import RunnableConfig
 from graph.state import AgentState
 from services.document_factory import DocumentFactory
-from shared.config import REPO_PATH
-
 
 def save_test_node(state: AgentState, config: RunnableConfig):
 
+    repo_path = config["configurable"]["repo_path"]
     db_service = config["configurable"]["vdb"]
     processor = config["configurable"]["processor"]
 
@@ -19,8 +18,8 @@ def save_test_node(state: AgentState, config: RunnableConfig):
     if not rel_path:
         return state
         
-    full_path = Path(REPO_PATH) / rel_path
-    root_path = Path(REPO_PATH)
+    full_path = Path(repo_path) / rel_path
+    root_path = Path(repo_path)
 
     # 3. הקריאה המדויקת ל-Factory
     # שים לב: אנחנו מעבירים את הנתיבים ואת ה-Flag של ה-is_test

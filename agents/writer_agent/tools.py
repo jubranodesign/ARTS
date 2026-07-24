@@ -1,18 +1,19 @@
 import os
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from shared.config import REPO_PATH
 from utils.utils import get_safe_full_path
 
 @tool
-def write_local_file(file_path: str, content: str) -> str:
+def write_local_file(file_path: str, content: str, config: RunnableConfig) -> str:
     """
     Writes content to a local file. 
     Path must be relative to project root.
     """
     try:
  
-        full_path = get_safe_full_path(REPO_PATH, file_path)
+        repo_path = config["configurable"]["repo_path"]
+        full_path = get_safe_full_path(repo_path, file_path)
 
         print(f"\n💾 [TOOL CALL] Writing file: {full_path}")
 
@@ -32,7 +33,7 @@ def write_local_file(file_path: str, content: str) -> str:
 
 
 @tool
-def patch_test_code(file_path: str, patch_content: str) -> str:
+def patch_test_code(file_path: str, patch_content: str, config: RunnableConfig) -> str:
     """
     Applies a Search/Replace patch to a file using a safe path.
     Format of patch_content:
@@ -45,7 +46,8 @@ def patch_test_code(file_path: str, patch_content: str) -> str:
     print(f"patch_test_code patch_content: {patch_content}")
     try:
         # שימוש בפונקציית העזר לקבלת נתיב מלא ובטוח
-        full_path = get_safe_full_path(REPO_PATH, file_path)
+        repo_path = config["configurable"]["repo_path"]
+        full_path = get_safe_full_path(repo_path, file_path)
         
         if not os.path.exists(full_path):
             return f"Error: File {file_path} (Full path: {full_path}) not found."

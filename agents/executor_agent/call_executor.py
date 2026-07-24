@@ -1,10 +1,11 @@
 import os
+from langgraph.graph.state import RunnableConfig
 from graph.state import AgentState
-from shared.config import REPO_PATH
 from utils.testing import run_pytest
 from utils.paths import get_safe_full_path
 
-def call_executor(state: AgentState):
+def call_executor(state: AgentState, config: RunnableConfig):
+    repo_path = config["configurable"]["repo_path"]
     # 1. שליפת הנתיב מה-State (שנשמר בשלב ה-Writer)
     test_file_path = state.get("test_file_path")
     current_attempts = state.get("attempts", 0)
@@ -17,13 +18,13 @@ def call_executor(state: AgentState):
     print(f"Running pytest on: {test_file_path}")
 
     # 2. בניית נתיב מלא בצורה בטוחה
-    # full_path = get_safe_full_path(REPO_PATH, test_file_path)
+    # full_path = get_safe_full_path(repo_path, test_file_path)
         
     # print(f"Running pytest on full path: {full_path}")
 
     # status, logs = run_pytest(
     #     full_path=full_path,
-    #     repo_path=REPO_PATH,
+    #     repo_path=repo_path,
     #     timeout=60,
     # )
 
@@ -32,7 +33,7 @@ def call_executor(state: AgentState):
     source_service_dir = os.path.dirname(target_file) 
 
     # 2. בונים נתיב אבסולוטי מלא לתיקיית קוד המקור בתוך ה-Repo
-    full_service_path = os.path.abspath(os.path.join(REPO_PATH, source_service_dir))
+    full_service_path = os.path.abspath(os.path.join(repo_path, source_service_dir))
 
     # 3. מייצרים סביבת ריצה דינמית (Environment)
     env = os.environ.copy()
@@ -40,10 +41,10 @@ def call_executor(state: AgentState):
     # 4. מזריקים ל-PYTHONPATH את השורש ואת התיקייה המקורית של השירות (Source Service Dir)
     # משתמשים בנקודתיים (:) בלינוקס/מקינטוש או נקודה-פסיק (;) בווינדוס
     path_separator = ";" if os.name == "nt" else ":"
-    env["PYTHONPATH"] = f"{REPO_PATH}{path_separator}{full_service_path}{path_separator}{env.get('PYTHONPATH', '')}"
+    env["PYTHONPATH"] = f"{repo_path}{path_separator}{full_service_path}{path_separator}{env.get('PYTHONPATH', '')}"
 
     # חילוץ נתיב מלא לקובץ הטסט האמיתי כדי להריץ רק אותו
-    full_test_file_path = get_safe_full_path(REPO_PATH, test_file_path)
+    full_test_file_path = get_safe_full_path(repo_path, test_file_path)
 
     print(f"🚀 Dynamically injected Source to PYTHONPATH: {full_service_path}")
     print(f"Running pytest on full path: {full_test_file_path}")
@@ -51,7 +52,7 @@ def call_executor(state: AgentState):
     # 5. מריצים את ה-Pytest על קובץ הטסט, עם ה-env שמכיר את קוד המקור!
     status, logs = run_pytest(
         full_path=full_test_file_path, # <-- מריצים את קובץ הטסט!
-        repo_path=REPO_PATH,
+        repo_path=repo_path,
         env=env,
         timeout=60,
     )

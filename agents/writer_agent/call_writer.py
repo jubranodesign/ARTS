@@ -4,13 +4,14 @@ from agents.shared.agent_tools import AGENT_TOOLS
 from agents.writer_agent.prompts import REPAIR_PROMPT_TEMPLATE, WRITER_PROMPT_TEMPLATE
 from agents.writer_agent.tools import WRITER_TOOLS
 from graph.state import AgentState
-from shared.config import REPO_PATH, TEST_FRAMEWORK, MOCK_TOOL, setup_node_llm
+from shared.config import TEST_FRAMEWORK, MOCK_TOOL, setup_node_llm
 from shared.logging_rules import SHARED_LOGGING_RULES
 from utils.utils import build_agent_messages, count_test_cases_from_list, get_import_path, get_test_path
 from utils.failure_analyzer import analyze_test_failure
 
 
 def call_writer(state: AgentState, config: RunnableConfig):
+    repo_path = config["configurable"]["repo_path"]
     # 1. שליפת ההיסטוריה מה-State
     messages = state.get("messages", [])
 
@@ -107,7 +108,7 @@ def call_writer(state: AgentState, config: RunnableConfig):
         print("call_writer golden_example: ", golden_test_summary)
 
         full_prompt = WRITER_PROMPT_TEMPLATE.format(
-            repo_path=REPO_PATH,
+            repo_path=repo_path,
             target_file=target_file,
             test_file_path=test_file_path,
             plan=plan_text,

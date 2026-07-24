@@ -1,15 +1,15 @@
 import os
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from shared.config import REPO_PATH
 from utils.utils import get_safe_full_path
 
 @tool
-def read_local_file(file_path: str) -> str:
+def read_local_file(file_path: str, config: RunnableConfig) -> str:
     """Reads a file from the project. Path must be relative to project root."""
     try:
-
-        full_path = get_safe_full_path(REPO_PATH, file_path)
+        repo_path = config["configurable"]["repo_path"]
+        full_path = get_safe_full_path(repo_path, file_path)
 
         print(f"\n📖 [TOOL CALL] Reading file: {full_path}")
 
@@ -34,6 +34,5 @@ def read_local_file(file_path: str) -> str:
 
 
 AGENT_TOOLS = [read_local_file]
-
 
 
