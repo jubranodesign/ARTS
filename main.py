@@ -3,7 +3,6 @@ from langchain_core.messages import HumanMessage
 from graph.builder import app
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService # הייבוא של הגרף המקומפל מה-Builder
-from shared.config import REPO_PATH
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -77,7 +76,7 @@ def print_current_db_state(app, thread_id):
      print("="*50 + "\n")
 
 
-def run_test_system_stream():
+def run_test_system_stream(repo_path: str):
     console = Console()
 
     vdb_instance = VectorDBService()
@@ -90,7 +89,7 @@ def run_test_system_stream():
             "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories.",
             "vdb": vdb_instance,
             "processor": processor,
-            "repo_path": REPO_PATH,
+            "repo_path": repo_path,
         }
     }
 
@@ -202,7 +201,7 @@ def run_test_system_stream():
         ))
 
 
-def run_test_system():
+def run_test_system(repo_path: str):
     # 1. הגדרות בסיס
     vdb_instance = VectorDBService()
     processor = CodeProcessor()
@@ -213,7 +212,7 @@ def run_test_system():
             "model_provider": "groq",
             "vdb": vdb_instance,
             "processor": processor,
-            "repo_path": REPO_PATH,
+            "repo_path": repo_path,
         }
     }
     user_task = "Write a comprehensive test for the scraper service, focusing on data validation."
@@ -264,4 +263,21 @@ def run_test_system():
 
 
 if __name__ == "__main__":
-    run_test_system_stream()
+    import argparse
+
+    from shared.repo_cli import add_repo_path_argument, resolve_repo_path
+
+    parser = argparse.ArgumentParser(description="Run the agentic test system.")
+    add_repo_path_argument(parser)
+    parser.add_argument(
+        "--invoke",
+        action="store_true",
+        help="Use strict invoke mode instead of the default streaming run.",
+    )
+    args = parser.parse_args()
+    repo_path = resolve_repo_path(args.repo_path)
+
+    if args.invoke:
+        run_test_system(repo_path)
+    else:
+        run_test_system_stream(repo_path)

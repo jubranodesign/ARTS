@@ -15,9 +15,9 @@ from shared.node_llm import setup_node_llm
 from shared.paths import (
     BASE_DIR,
     DATA_DIR,
-    REPO_PATH,
-    REPO_SEED_PATH,
     VECTOR_STORE_PATH,
+    get_repo_path,
+    get_repo_seed_path,
 )
 
 __all__ = [
@@ -27,11 +27,11 @@ __all__ = [
     "EMBEDDING_MODEL_VERSION",
     "LLM_MODEL_NAME",
     "MOCK_TOOL",
-    "REPO_PATH",
-    "REPO_SEED_PATH",
     "TEST_FRAMEWORK",
     "VECTOR_STORE_PATH",
     "get_embeddings_model",
     "get_model",
+    "get_repo_path",
+    "get_repo_seed_path",
     "setup_node_llm",
 ]
