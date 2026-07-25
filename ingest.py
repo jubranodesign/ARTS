@@ -12,14 +12,20 @@ import pickle
 from utils.retrieval import prepare_bm25_documents, print_chunks_summary, python_code_tokenizer
 from shared.ingestion_prompts import SEED_SUMMARY_PROMPT, CHUNK_SUMMARY_PROMPT
 
-def run_ingestion(provider="mistral", prompt=CHUNK_SUMMARY_PROMPT, is_test=False, repo_path=REPO_PATH, vdb=None, processor=None):
+def run_ingestion(
+    vdb: VectorDBService,
+    provider="mistral",
+    prompt=CHUNK_SUMMARY_PROMPT,
+    is_test=False,
+    repo_path=REPO_PATH,
+    processor=None,
+):
     print("--- 🏁 The script has started! ---")
     print(f"🚀 Starting ingestion for: {repo_path} (Mode: {'Test/Seed' if is_test else 'Source Code'})")
 
     scanner = CodeScanner()
     factory = DocumentFactory()
     proc = processor or CodeProcessor(provider=provider, summary_prompt=prompt)
-    db_service = vdb or VectorDBService()
 
     try:
         # שלב א': סריקה ויצירת מסמכי בסיס
@@ -33,7 +39,7 @@ def run_ingestion(provider="mistral", prompt=CHUNK_SUMMARY_PROMPT, is_test=False
         print_chunks_summary(chunks)
 
         # שלב ג': שמירה ל-ChromaDB (החיפוש הסמנטי - רץ תמיד עבור שניהם)
-        success = db_service.save_documents(chunks)
+        success = vdb.save_documents(chunks)
 
         # 🎯 שלב ד' + ה': בניית אינדקס מילות מפתח ושמירה לדיסק - רק עבור קוד מקור!
         dependency_retriever = None
@@ -73,10 +79,10 @@ if __name__ == "__main__":
     vdb = VectorDBService()
     processor = CodeProcessor(provider="mistral", summary_prompt=SEED_SUMMARY_PROMPT)
     run_ingestion(
+        vdb=vdb,
         provider="mistral",
         prompt=SEED_SUMMARY_PROMPT,
         is_test=True,
         repo_path=REPO_SEED_PATH,
-        vdb=vdb,
         processor=processor,
     )
