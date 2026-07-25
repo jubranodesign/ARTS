@@ -17,19 +17,6 @@ def call_executor(state: AgentState, config: RunnableConfig):
 
     print(f"Running pytest on: {test_file_path}")
 
-    # 2. בניית נתיב מלא בצורה בטוחה
-    # full_path = get_safe_full_path(repo_path, test_file_path)
-        
-    # print(f"Running pytest on full path: {full_path}")
-
-    # status, logs = run_pytest(
-    #     full_path=full_path,
-    #     repo_path=repo_path,
-    #     timeout=60,
-    # )
-
-# 1. מחלצים את התיקייה של קובץ המקור (target_file = "scraper_service/scraper.py")
-    # זה יחזיר אוטומטית: "scraper_service"
     source_service_dir = os.path.dirname(target_file) 
 
     # 2. בונים נתיב אבסולוטי מלא לתיקיית קוד המקור בתוך ה-Repo
@@ -57,9 +44,6 @@ def call_executor(state: AgentState, config: RunnableConfig):
         timeout=60,
     )
 
-    # print(f"Running pytest status: {status}")
-    # print(f"Running pytest logs: {logs}")
-    # 4. עדכון ה-State
     return {
         "test_run_status": status,
         "last_run_logs": logs,

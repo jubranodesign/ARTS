@@ -248,19 +248,8 @@ log_importance = pd.DataFrame(index=X.columns, data=logmodel.coef_[0], columns=[
 print("--- Logistic Regression Coefficients ---")
 print(log_importance.sort_values(by='Coefficient', ascending=False))
 
-# # Confusion Matrix
-# print("--- Confusion Matrix ---")
-# print(confusion_matrix(y_test, predictions))
-
-# # Full Report
-# print("\n--- Classification Report ---")
-# print(classification_report(y_test, predictions))
-
-
-# 1. במקום predict, נשתמש ב-predict_proba כדי לקבל הסתברויות
-# התוצאה היא מערך של [הסתברות ל-0, הסתברות ל-1]
+# במקום predict, נשתמש ב-predict_proba כדי לקבל הסתברויות
 log_probs = logmodel.predict_proba(X_test_scaled)[:, 1]
-# print(f"--- log_probs {log_probs} ---")
 # 2. הגדרת הסף החדש (למשל 0.3)
 custom_threshold = 0.40
 
@@ -326,9 +315,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 
 # 1. Initialize Random Forest with balanced weights
-# rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-# rf_model = RandomForestClassifier(n_estimators=800, max_depth=20, min_samples_leaf=8, max_features='log2')
-# rf_model = RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42)
 rf_model = RandomForestClassifier(
     n_estimators=800, 
     max_depth=20, 
@@ -362,11 +348,6 @@ print(classification_report(y_test, rf_predictions))
 # This adjustment allows the agent to be more "vigilant," flagging modules for testing even when the model has lower confidence, thus providing a stronger safety net for the codebase.
 
 # %%
-# קבלת ההסתברויות (Probabilities)
-# print("--- X_test_scaled ---", X_test_scaled)
-# rf_probs = rf_model.predict_proba(X_test_scaled)
-# print("--- rf_probs ---", rf_probs)
-
 # קבלת ההסתברויות (Probabilities)
 rf_probs = rf_model.predict_proba(X_test_scaled)[:, 1]
 

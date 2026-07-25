@@ -2,20 +2,6 @@ import io
 import re
 import tokenize
 
-# def python_code_tokenizer(text: str) -> list[str]:
-#     tokens = []
-#     try:
-#         # פירוק הקוד בצורה נייטיבית לפי חוקי השפה
-#         for tok in tokenize.tokenize(io.BytesIO(text.encode('utf-8')).readline):
-#             # שומרים רק שמות (משתנים/פונקציות/מחלקות) או ערכים
-#             if tok.type in (tokenize.NAME, tokenize.STRING, tokenize.NUMBER):
-#                 tokens.append(tok.string.lower())
-#     except Exception:
-#         # פולבק בטוח למקרה של בעיית סינטקס
-#         import re
-#         return re.findall(r'\b\w+\b', text.lower())
-#     return tokens
-
 def python_code_tokenizer(text: str) -> list[str]:
     tokens = []
     try:

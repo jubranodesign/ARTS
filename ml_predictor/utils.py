@@ -7,43 +7,6 @@ import numpy as np
 import pickle
 from tabulate import tabulate
 
-# def extract_code_metrics(code_string):
-#     """
-#     מחלץ את המדדים המדויקים התואמים לאקסל של NASA:
-#     ['loc', 'v(g)', 'v', 'd', 'e', 'b']
-#     """
-#     try:
-#         # 1. חילוץ loc (נשתמש ב-lloc כי הוא הכי מדויק למדדי NASA)
-#         raw_metrics = analyze(code_string)
-#         loc = raw_metrics.lloc
-
-#         # 2. חילוץ v(g) - מורכבות ציקלומטית (ממוצע לקובץ)
-#         v = ComplexityVisitor.from_code(code_string)
-#         # אם יש פונקציות, ניקח ממוצע. אם הקובץ ריק, המורכבות היא 1.
-#         vg_list = [obj.complexity for obj in v.functions + v.classes]
-#         vg = sum(vg_list) / len(vg_list) if vg_list else 1
-
-#         # 3. חילוץ מדדי Halstead (v, d, e, b)
-#         halstead_metrics = h_visit(code_string)
-#         # אנחנו לוקחים את המדדים הכוללים (total) של הקובץ
-#         h_v = halstead_metrics.total.volume
-#         h_d = halstead_metrics.total.difficulty
-#         h_e = halstead_metrics.total.effort
-#         # h_b = halstead_metrics.total.bugs
-
-#         return {
-#             'loc': loc,
-#             'v(g)': vg,
-#             'v': h_v,
-#             'd': h_d,
-#             'e': h_e,
-#             # 'b': h_b,
-#             'defects': None  # זה מה שהמודל יחזה בהמשך
-#         }
-#     except Exception as error:
-#         print(f"Error analyzing code: {error}")
-#         return None
-
 # משתנים גלובליים לטעינה חד-פעמית
 _model = None
 _scaler = None

@@ -5,11 +5,6 @@ from langgraph.graph import END
 from graph.state import AgentState
 
 
-# def route_after_input(state: AgentState):
-#     if state.get("user_input"):
-#         return "researcher"
-#     return END
-
 def route_after_input(state: AgentState):
     user_input = state.get("user_input")
     risk_score = state.get("risk_score", 0)
@@ -43,13 +38,6 @@ def route_after_cleaner(state: AgentState):
     print("🔄 Cleaner -> Routing to REVIEWER")
     return "to_reviewer"
 
-
-# def should_continue_after_test(state: AgentState):
-#     if state["test_run_status"] == "passed":
-#         print("should_continue_after_test. passed")
-#         return "finish"
-#     print("should_continue_after_test. fix_code")
-#     return "fix_code"
 
 def should_continue_after_test(state: AgentState):
     # 1. אם הטסט עבר - מסיימים בהצלחה

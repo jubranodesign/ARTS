@@ -10,27 +10,6 @@ from shared.config import DATA_DIR
 from utils.paths import normalize_relative_path
 
 
-# @tool
-# def search_codebase(query: str, config: RunnableConfig) -> str:
-#    """
-#     Search the project's source code for snippets and their relative paths.
-#     Use this tool to find logic, classes, or specific files.
-#     RETURNS: A list of code chunks. Each chunk starts with 'FILE: path/to/file.py'.
-
-#      Args:
-#       query: A search term. Best results come from using function names, 
-#            class names, or filenames WITHOUT the path/extension 
-#            (e.g., use 'scraper_api' instead of 'scraper_service/scraper_api.py').
-#    """
-#    try:
-#         # שליפת המופע מהקונפיג
-#         vdb = config.get("configurable", {}).get("vdb") or VectorDBService()
-#         # הקריאה פשוטה כי ה-Service כבר מחזיר מחרוזת מעובדת (Formatted String)
-#         return vdb.search_code(query)
-        
-#    except Exception as e:
-#         return f"Error searching the codebase: {str(e)}"
-
 @tool
 def search_dependencies_bm25(query: str, state: AgentState) -> str:
     """
@@ -85,16 +64,12 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
             
         # פולבק: אם הכל סונן, ניקח את התוצאה הראשונה
         if not best_match:
-            # best_match = results[0]
             print(f"⚠️ Search concluded: No external dependencies found for query '{processed_query}' outside of the target file.")
             return f"INFO: No external dependencies discovered in the codebase for symbol: '{processed_query}'."
             
         # 6. חילוץ הנתונים מהצ'אנק הנבחר
         relative_path = best_match.metadata.get("relative_path", "Unknown path")
         source_code = best_match.page_content
-    
-        # print(f" source_code: {source_code}")
-        # print(f"✅ Successfully selected dependency from: {relative_path}")
       
         console = Console()
         
@@ -116,39 +91,6 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
     except Exception as e:
         print(f"❌ Error in search_dependencies_bm25: {str(e)}")
         return f"Error during dependency search: {str(e)}"
-
-# @tool
-# def search_golden_tests_semantic(query: str, search_type: str = "tests_only", config: RunnableConfig = None) -> str:
-#     """
-#     Semantic search over the codebase to discover existing test patterns and "Golden Examples".
-#     Use this tool ONLY to find how similar features, workflows, or code logic are tested elsewhere 
-#     in the project.
-    
-#     Do NOT use this tool to find core file implementations or source code dependencies (use search_dependencies_bm25 instead).
-    
-#     Args:
-#         query: Semantic description of the logic or test pattern you are looking for (e.g., 'how to test async web scrapers').
-#         search_type: Hardcoded to 'tests_only' to filter out production code and focus strictly on test files.
-    
-#     RETURNS: A formatted string of reference test code chunks.
-#     """
-#     print("search_golden_tests_semantic query ", query)
-#     try:
-#         vdb = config.get("configurable", {}).get("vdb") or VectorDBService()
-        
-#         # בניית ה-filter עבור ה-Service
-#         filter_dict = None
-#         if search_type == "tests_only":
-#             filter_dict = {"is_test": True}
-#         elif search_type == "code_only":
-#             filter_dict = {"is_test": False}
-
-#         print("filter_dict ", filter_dict)   
-#         # קריאה ל-Service עם ה-filter החדש
-#         return vdb.search_code(query, filter_dict=filter_dict)
-        
-#     except Exception as e:
-#         return f"Error searching the codebase: {str(e)}"
 
 @tool
 def search_golden_tests_semantic(query: str, config: RunnableConfig = None) -> str:

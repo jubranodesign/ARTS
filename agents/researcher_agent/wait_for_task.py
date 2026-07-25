@@ -5,12 +5,6 @@ from utils.paths import extract_python_path
 from utils.repo_files import read_repo_text
 
 
-# def wait_for_task(state: AgentState):
-#     # כאן הגרף עוצר. כשתריץ אותו שוב עם קלט (user_input),
-#     # הוא ימשיך מהמקום הזה.
-#     return state
-
-
 def wait_for_task(state: AgentState, config: RunnableConfig):
     print("wait_for_task")
     repo_path = config["configurable"]["repo_path"]
@@ -30,15 +24,7 @@ def wait_for_task(state: AgentState, config: RunnableConfig):
             "value": float(data['value'])
         })
 
-    # הדפסה למשתמש (אופציונלי, כדי שיראה בזמן אמת)
-    # print("\n[AI Risk Analysis] Top Factors:")
-    # for r in reasons_for_state:
-    #     print(f" - {r['feature']}: Impact {r['impact']:.2f}, Value: {r['value']}")
-
-    # new_input = input("\nYour task? (Enter to use AI Risk Assessment): ")
-
     return {
         "risk_score": float(risk),
         "risk_reasons": reasons_for_state, # נשמר ב-State לסבבים הבאים
-        # "user_input": new_input if new_input.strip() else state.get("user_input")
     }

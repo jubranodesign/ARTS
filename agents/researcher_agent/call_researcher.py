@@ -30,11 +30,7 @@ def call_researcher(state: AgentState, config: RunnableConfig):
             target_file_content = read_repo_text_tool_response(repo_path, target_file)
         else:
             target_file_content = "No target file path detected."
-            
-    # print("risk_context ", risk_context)
-    # 2. בניית ה-System Message המעודכן
-    # ה-user_task נשאר כאן כי הוא קריטי להנחיית המודל בכל סיבוב
-   # 2. בניית ה-System Message המעודכן (משולב)
+
     instruction_content = f"""
     {RESEARCHER_SYSTEM_PROMPT}
 
@@ -75,28 +71,6 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     try:
         response = llm.invoke(messages_to_send)
 
-        # if "### RESEARCH_DATA_DUMP ###" in response.content:
-        #  # שליפת ה-Ground Truth (נניח מה-config או מה-state)
-        #  ground_truth = config.get("configurable", {}).get("ground_truth", None)
-    
-        #  if ground_truth:
-        #     # שליחת הנתונים לאבחון
-        #     eval_results = evaluate_quality(
-        #     question=user_task,
-        #     final_dump=response.content,
-        #     message_history=trimmed_history, # ההיסטוריה שהמודל ראה בפועל
-        #     ground_truth=ground_truth
-        #     )
-        #     print(f"eval_results: {eval_results}")
-         
-        #     report = evaluate_with_custom_judge(
-        #                 judgment_model=ResearcherJudgment,
-        #                 rubric=RESEARCHER_RUBRIC,
-        #                 question=user_task,
-        #                 answer=response.content,
-        #                 message_history=trimmed_history
-        #             )
-        #     print(f"evaluate_with_custom_judge: {report}")
         state_update = {"messages": [response]}
         if not state.get("target_file_code") and target_file_content:
               state_update["target_file_code"] = target_file_content

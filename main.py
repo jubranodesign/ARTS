@@ -1,6 +1,5 @@
-import os
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
+from langchain_core.messages import HumanMessage
 from graph.builder import app
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService # הייבוא של הגרף המקומפל מה-Builder
@@ -77,78 +76,6 @@ def print_current_db_state(app, thread_id):
      print(f"\n📝 Architecture Summary:\n{summary}")
      print("="*50 + "\n")
 
-# def run_test_system_stream():
-#     vdb_instance = VectorDBService()
-#     thread_id = "test_invoke_session_001"
-#     config = {"vdb": vdb_instance, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
-   
-#     print(f"🚀 Starting Test Agent System (Thread: {thread_id})")
-#     print("-" * 50)
-
-#     # 2. הרצה ראשונית
-#     app.invoke({"messages": []}, config=config)
-
-#     # 3. המשימה
-#     user_task = "Write unit tests for the file scraper_service/scraper_api.py"
-#     app.update_state(config, {"user_input": user_task, "messages": [HumanMessage(content=user_task)]}, as_node="wait_for_task")
-
-#     print(f"\n🔍 Analyzing project for task: '{user_task}'...")
-
-#     # 4. Streaming - הדפסה לכל Node
-#     for event in app.stream(None, config, stream_mode="updates"):
-#         for node_name, output in event.items():
-#             print(f"\n[NODE: {node_name.upper()}]")
-            
-#             if node_name == "researcher":
-#                 print(f"📡 Researcher is looking for clues in Vector DB...")
-            
-#             elif node_name == "summarizer":
-#                 summary_val = output.get('architecture_summary', "No summary provided")
-#                 print(f"📝 Summary updated. Confidence: {str(summary_val)}...")
-            
-#             elif node_name == "designer":
-#                 if "messages" in output:
-#                     last_msg = output["messages"][-1]
-#                     # הדפסת התוכן של הדיזיינר (הטיוטה)
-#                     if last_msg.content:
-#                         print(f"🎨 Designer Content:\n{last_msg.content}")
-#                     # הדפסת הכלים שלו
-#                     if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-#                         print(f"🛠️ Designer is calling tools: {[t['name'] for t in last_msg.tool_calls]}")
-
-#             elif node_name == "reviewer":
-#                 if "messages" in output:
-#                     last_msg = output["messages"][-1]
-#                     # הדפסת התוכן של הריביוור (התיקונים/התוכנית הסופית)
-#                     if last_msg.content:
-#                         print(f"🛡️ Reviewer Content:\n{last_msg.content}")
-#                     # הדפסת הכלים שלו
-#                     if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-#                         print(f"🛠️ Reviewer is calling tools: {[t['name'] for t in last_msg.tool_calls]}")
-
-#             elif node_name == "update_investigated_files":
-#                 print(f"📂 Files investigated so far: {output.get('investigated_files')}")
-
-#     console = Console()
-#     # 5. הצגת התוצאה הסופית
-#     final_state = app.get_state(config)
-#     final_messages = final_state.values.get("messages", [])
-    
-#     if final_messages:
-#         # חילוץ תוכן מהודעת ה-AI האחרונה שיש בה טקסט (למקרה שהאחרונה היא קריאת כלי ריקה)
-#         target_content = ""
-#         for msg in reversed(final_messages):
-#             if isinstance(msg, AIMessage) and msg.content:
-#                 target_content = msg.content
-#                 break
-        
-#         if target_content:
-#             full_text = "".join([item.get("text", "") for item in target_content if item.get("type") == "text"]) if isinstance(target_content, list) else target_content
-#             console.print("\n")
-#             console.print(Panel("✅ [bold green]FINAL TEST PLAN GENERATED[/bold green]", expand=False))
-#             console.print(Markdown(full_text))
-#             console.print("="*50)
-
 
 def run_test_system_stream():
     console = Console()
@@ -171,10 +98,7 @@ def run_test_system_stream():
     console.print("-" * 60)
 
     # 1. המשימה
-    # user_task = "Write unit tests for the file scraper_service/scraper.py"
     user_task = "Write unit tests for the file analysis_service/analysis.py"
-    
-    # user_task = "Analyze the database commit logic in the scraper."
 
     # עדכון ה-State הראשוני
     app.update_state(config, {
@@ -183,7 +107,6 @@ def run_test_system_stream():
         # אנחנו מאתחלים את הסטטוס ל-pending כדי שה-Writer ידע שזה סבב ראשון
         "test_run_status": "pending"
     },
-    #  as_node="wait_for_task"
      )
 
     console.print(f"🔍 [bold yellow]Analyzing project for task:[/bold yellow] '{user_task}'...\n")
@@ -256,17 +179,7 @@ def run_test_system_stream():
                     short_logs = "\n".join(logs.splitlines()[-15:]) 
                     console.print(Panel(short_logs, title="⚠️ Failure Logs (Last 15 lines)", border_style="red"))   
 
-    # 3. סיום
-    # console.print("\n")
-    # console.print(Panel(
-    #     f"✅ [bold green]WORKFLOW COMPLETE[/bold green]\n"
-    #     f"The tests have been generated and saved.\n"
-    #     f"You can now run [bold]pytest tests/[/bold] to verify.",
-    #     expand=False, 
-    #     border_style="bold green"
-    # ))
     # 3. סיום - מחוץ ללולאת ה-stream
-    # נשלוף את ה-state הסופי כדי לדעת מה קרה
     final_state = app.get_state(config).values
     final_status = final_state.get("test_run_status", "unknown")
 
@@ -351,15 +264,4 @@ def run_test_system():
 
 
 if __name__ == "__main__":
-    #  run_test_system()
     run_test_system_stream()
-
-    #  config = {"configurable": {"thread_id": "test_invoke_session_001"}}
-    #  messages = app.get_state(config).values["messages"]
-    #  app.update_state(config, {
-    #  "test_chunks": "",
-    #  "messages": [RemoveMessage(id=m.id) for m in messages]
-    # # "investigated_files": {"scraper_service/scraper_api.py"} 
-    #  })
-    #  print_current_db_state(app,"test_invoke_session_001")
-    # print_summary_evolution(app,"test_invoke_session_001")

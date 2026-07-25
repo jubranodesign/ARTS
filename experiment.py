@@ -165,5 +165,4 @@ def run_writer_experiment():
 
 
 if __name__ == "__main__":
-    # run_designer_experiment()
     run_writer_experiment()

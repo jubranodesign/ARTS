@@ -59,9 +59,6 @@ class VectorDBService:
         print(f"search_code docs: {docs}")
 
         formatted_results = []
-        # for i, doc in enumerate(docs):
-        #     source = doc.metadata.get("relative_path", "Unknown")
-        #     formatted_results.append(f"--- RESULT {i+1} | FILE: {source} ---\n{doc.page_content}")
         for i, doc in enumerate(docs):
           metadata = doc.metadata
           source = metadata.get("relative_path", "Unknown")

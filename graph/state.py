@@ -1,4 +1,5 @@
-from typing_extensions import TypedDict from typing import Annotated, Sequence, Literal
+from typing_extensions import TypedDict
+from typing import Annotated, Sequence, Literal
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
@@ -14,17 +15,12 @@ class AgentState(TypedDict):
     test_plan: str      
 
     review_completed: bool
-           # שלב המעצב
     target_file: str           # הנתיב לקובץ המקורי
  
-    # # --- שלב הכותב (Writer) ---
     test_file_path: str        # הנתיב לקובץ שנוצר (למשל: tests/test_api.py)
     
-    # # --- שלב המריץ (Runner) - כאן זה נמצא! ---
-    # # סטטוס הריצה: האם הטסט עבר או נכשל
     test_run_status: Literal["passed", "failed", "pending"] 
     
-    # # הלוג המלא של pytest (כדי שהמעצב יוכל לתקן אם נכשל)
     last_run_logs: str
 
     test_chunks: str
