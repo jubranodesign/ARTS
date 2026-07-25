@@ -1,6 +1,9 @@
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from langchain_core.messages import HumanMessage
-from graph.builder import app
+from graph.builder import build_app
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService # הייבוא של הגרף המקומפל מה-Builder
 from rich.console import Console
@@ -9,8 +12,7 @@ from rich.panel import Panel
 
 from utils.utils import get_clean_text
 
-# טעינת משתני סביבה (API Keys)
-load_dotenv()
+# טעינת משתני סביבה (API Keys) — load_dotenv() runs at top of this module
 
 
 def print_summary_evolution(app, thread_id):
@@ -78,7 +80,15 @@ def print_current_db_state(app, thread_id):
 
 def run_test_system_stream(repo_path: str):
     console = Console()
+    app, conn = build_app()
+    try:
+        return _run_test_system_stream_impl(console, app, repo_path)
+    finally:
+        conn.close()
+        print("Cleanup: SQLite connection closed.")
 
+
+def _run_test_system_stream_impl(console, app, repo_path: str):
     vdb_instance = VectorDBService()
     processor = CodeProcessor()
     thread_id = "test_invoke_session_001"
@@ -202,6 +212,15 @@ def run_test_system_stream(repo_path: str):
 
 
 def run_test_system(repo_path: str):
+    app, conn = build_app()
+    try:
+        _run_test_system_impl(app, repo_path)
+    finally:
+        conn.close()
+        print("Cleanup: SQLite connection closed.")
+
+
+def _run_test_system_impl(app, repo_path: str):
     # 1. הגדרות בסיס
     vdb_instance = VectorDBService()
     processor = CodeProcessor()

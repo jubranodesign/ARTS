@@ -1,4 +1,4 @@
-import atexit
+import os
 import sqlite3
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
@@ -119,15 +119,34 @@ workflow.add_conditional_edges(
 
 workflow.add_edge("save_successful_test", END)
 
-conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
+_app_instance = None
+_app_conn = None
 
 
-def cleanup():
-    conn.close()
-    print("Cleanup: SQLite connection closed.")
+def build_app(checkpoint_path: str | None = None):
+    """
+    Compile the graph with a SQLite checkpointer.
+    Returns (app, conn). Caller should conn.close() when done (or use a cached singleton via build_app() with no args).
+    """
+    global _app_instance, _app_conn
+
+    path = checkpoint_path or os.environ.get("CHECKPOINT_DB", "checkpoints.sqlite")
+    if _app_instance is not None and checkpoint_path is None:
+        return _app_instance, _app_conn
+
+    if _app_conn is not None:
+        _app_conn.close()
+
+    conn = sqlite3.connect(path, check_same_thread=False)
+    memory = SqliteSaver(conn)
+    compiled = workflow.compile(checkpointer=memory, interrupt_before=["wait_for_task"])
+    _app_instance = compiled
+    _app_conn = conn
+    return compiled, conn
 
 
-atexit.register(cleanup)
-
-memory = SqliteSaver(conn)
-app = workflow.compile(checkpointer=memory, interrupt_before=["wait_for_task"])
+def __getattr__(name: str):
+    """Lazy `app` for LangGraph CLI (`langgraph.json` → graph.builder:app)."""
+    if name == "app":
+        return build_app()[0]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
