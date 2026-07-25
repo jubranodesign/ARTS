@@ -1,8 +1,14 @@
+import logging
 import os
+
 from langgraph.graph.state import RunnableConfig
+
 from graph.state import AgentState
-from utils.testing import run_pytest
 from utils.paths import get_safe_full_path
+from utils.testing import run_pytest
+
+logger = logging.getLogger(__name__)
+
 
 def call_executor(state: AgentState, config: RunnableConfig):
     repo_path = config["configurable"]["repo_path"]
@@ -12,10 +18,10 @@ def call_executor(state: AgentState, config: RunnableConfig):
     target_file = state.get("target_file") 
 
     if not test_file_path:
-        print("❌ Error: No test file path found in state.")
+        logger.error("No test file path found in state.")
         return {"test_run_status": "failed", "last_run_logs": "No test file path provided."}
 
-    print(f"Running pytest on: {test_file_path}")
+    logger.info("Running pytest on: %s", test_file_path)
 
     source_service_dir = os.path.dirname(target_file) 
 
@@ -26,15 +32,15 @@ def call_executor(state: AgentState, config: RunnableConfig):
     env = os.environ.copy()
 
     # 4. מזריקים ל-PYTHONPATH את השורש ואת התיקייה המקורית של השירות (Source Service Dir)
-    # משתמשים בנקודתיים (:) בלינוקס/מקינטוש או נקודה-פסיק (;) בווינדוס
+    # משתמשים בנקודתיים (:) בלינוקס/מקינטוש או נקודה-פסיק (;) בווינדows
     path_separator = ";" if os.name == "nt" else ":"
     env["PYTHONPATH"] = f"{repo_path}{path_separator}{full_service_path}{path_separator}{env.get('PYTHONPATH', '')}"
 
     # חילוץ נתיב מלא לקובץ הטסט האמיתי כדי להריץ רק אותו
     full_test_file_path = get_safe_full_path(repo_path, test_file_path)
 
-    print(f"🚀 Dynamically injected Source to PYTHONPATH: {full_service_path}")
-    print(f"Running pytest on full path: {full_test_file_path}")
+    logger.info("Dynamically injected source to PYTHONPATH: %s", full_service_path)
+    logger.info("Running pytest on full path: %s", full_test_file_path)
 
     # 5. מריצים את ה-Pytest על קובץ הטסט, עם ה-env שמכיר את קוד המקור!
     status, logs = run_pytest(

@@ -1,20 +1,27 @@
+import logging
+
 from evaluation.retrieval.datasets import test_set
 from evaluation.retrieval.metrics import evaluate_retrieval
 from services.vector_db_service import VectorDBService
+
+logger = logging.getLogger(__name__)
 
 
 def run_retrieval_suite(vdb: VectorDBService):
     """
     מריץ סדרת בדיקות על שכבת השליפה (Retrieval) של הפרויקט.
     """
-    print("🚀 Starting Retrieval Evaluation Suite...\n")
+    logger.info("Starting Retrieval Evaluation Suite...")
 
     try:
-        print(f"Evaluating {len(test_set)} queries against Semantic Search (K=5)...\n")
+        logger.info(
+            "Evaluating %s queries against Semantic Search (K=5)...",
+            len(test_set),
+        )
         results_df = evaluate_retrieval(test_set, vdb)
 
     except Exception as e:
-        print(f"❌ Error during evaluation: {e}")
+        logger.error("Error during evaluation: %s", e)
         return
 
     return results_df

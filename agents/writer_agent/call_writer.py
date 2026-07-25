@@ -1,3 +1,5 @@
+import logging
+
 from langgraph.graph.state import RunnableConfig
 
 from agents.shared.agent_tools import AGENT_TOOLS
@@ -11,6 +13,8 @@ from agents.writer_agent.writer_logic import (
 from graph.state import AgentState
 from shared.config import setup_node_llm
 from utils.utils import build_agent_messages
+
+logger = logging.getLogger(__name__)
 
 
 def call_writer(state: AgentState, config: RunnableConfig):
@@ -34,8 +38,11 @@ def call_writer(state: AgentState, config: RunnableConfig):
         llm=llm,
     )
 
-    print(f"DEBUG: Writer node - Messages count: {len(input_messages)}")
-    print(f"DEBUG: Sequence types: {[type(m).__name__ for m in input_messages]}")
+    logger.debug(
+        "Writer node messages count=%s sequence_types=%s",
+        len(input_messages),
+        [type(m).__name__ for m in input_messages],
+    )
 
     response = llm.invoke(input_messages)
     return {"messages": [response], "test_file_path": ctx.test_file_path}

@@ -1,6 +1,9 @@
 import io
+import logging
 import re
 import tokenize
+
+logger = logging.getLogger(__name__)
 
 def python_code_tokenizer(text: str) -> list[str]:
     tokens = []
@@ -58,9 +61,7 @@ def print_chunks_summary(chunks: list) -> None:
     if not chunks:
         return
         
-    print("\n🔍 " + "="*20 + " MULTI-VECTOR CHUNKS SUMMARY REPORT " + "="*20)
-    print(f"Total Chunks Generated: {len(chunks)}")
-    print("-" * 76)
+    logger.debug("MULTI-VECTOR CHUNKS SUMMARY REPORT — total chunks: %s", len(chunks))
     
     for index, chunk in enumerate(chunks, start=1):
         file_name = chunk.metadata.get('file_name', 'unknown')
@@ -71,9 +72,11 @@ def print_chunks_summary(chunks: list) -> None:
         code_lines = original_code.split('\n')
         code_preview = '\n       '.join(code_lines[:3])
         
-        print(f"🧩 Chunk #{index} | 📄 File: {file_name} | relative_path: {relative_path} ")
-        print(f"   ↳ 📌 Description: {description}")
-        print(f"   ↳ 💻 Code Preview:\n       {code_preview}\n       ...")
-        print("-" * 76)
-        
-    print("=" * 76 + "\n")
+        logger.debug(
+            "Chunk #%s | file=%s | relative_path=%s | description=%s | code_preview=%s",
+            index,
+            file_name,
+            relative_path,
+            description[:200],
+            code_preview,
+        )

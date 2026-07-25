@@ -1,13 +1,16 @@
+import logging
 import os
 import pickle
 import re
-from langchain_core.tools import tool
+
 from langchain_core.runnables import RunnableConfig
-from rich.console import Console
-from rich.table import Table as RichTable
+from langchain_core.tools import tool
+
 from graph.state import AgentState
 from shared.config import DATA_DIR
 from utils.paths import normalize_relative_path
+
+logger = logging.getLogger(__name__)
 
 
 @tool
@@ -18,7 +21,7 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
     Use this ONLY when you discover a dependency/import in the target file and need its source code.
     Do NOT use this for semantic searching or test pattern discovery.
     """
-    print(f"🔍 Executing search_dependencies_bm25 for query: '{query}'")
+    logger.info("Executing search_dependencies_bm25 for query: %r", query)
     try:
         # 1. בניית הנתיב וטעינת אינדקס ה-BM25 מהדיסק
         bm25_index_path = os.path.join(DATA_DIR, "bm25_index.pkl")
@@ -41,12 +44,12 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
         
         # 4. שליפת נתיב קובץ המטרה מתוך ה-config.configurable שהזרקנו ב-Node
         target_file = state.get("target_file") 
-        print("target_file: ", target_file)
+        logger.debug("target_file: %s", target_file)
         # 5. לוגיקת פילטור כירורגית ונרמול סלאשים (Windows vs Linux)
         best_match = None
         # הופכים את scraper_service/scraper_api.py לקו אחיד ב-lower case
         normalized_target = normalize_relative_path(target_file, lowercase=True)
-        print("normalized_target: ", normalized_target)
+        logger.debug("normalized_target: %s", normalized_target)
         
         for doc in results:
             doc_path = normalize_relative_path(
@@ -55,7 +58,7 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
             
             # בדיקת התאמה: אם מדובר באותו הקובץ הנוכחי שהחוקר מנתח - מדלגים עליו!
             if normalized_target and (normalized_target in doc_path or doc_path in normalized_target):
-                print(f"✂️ Skipping target file chunk to avoid self-duplication: {doc_path}")
+                logger.debug("Skipping target file chunk to avoid self-duplication: %s", doc_path)
                 continue
                 
             # אם הגענו לכאן, מצאנו את התלות החיצונית הראשונה שהיא לא קובץ המקור
@@ -64,32 +67,32 @@ def search_dependencies_bm25(query: str, state: AgentState) -> str:
             
         # פולבק: אם הכל סונן, ניקח את התוצאה הראשונה
         if not best_match:
-            print(f"⚠️ Search concluded: No external dependencies found for query '{processed_query}' outside of the target file.")
+            logger.warning(
+                "Search concluded: no external dependencies for query %r outside target file",
+                processed_query,
+            )
             return f"INFO: No external dependencies discovered in the codebase for symbol: '{processed_query}'."
             
         # 6. חילוץ הנתונים מהצ'אנק הנבחר
         relative_path = best_match.metadata.get("relative_path", "Unknown path")
         source_code = best_match.page_content
       
-        console = Console()
-        
-        result_table = RichTable(show_lines=True, style="green")
-        result_table.add_column("Property", style="bold magenta", width=15)
-        result_table.add_column("Value", style="white")
-
-        result_table.add_row("Query Term", processed_query)
-        result_table.add_row("Relative Path", relative_path)
-
-        # חותכים תצוגה מקדימה של הקוד כדי שלא יציף את הטרמינל
-        code_preview = "\n".join(source_code.split("\n")[:10]) + "\n..." if len(source_code.split("\n")) > 10 else source_code
-        result_table.add_row("Code Preview", f"[dim]{code_preview}[/dim]")
-
-        console.print(result_table)
+        code_preview = (
+            "\n".join(source_code.split("\n")[:10]) + "\n..."
+            if len(source_code.split("\n")) > 10
+            else source_code
+        )
+        logger.debug(
+            "BM25 dependency match: query=%s relative_path=%s code_preview=%s",
+            processed_query,
+            relative_path,
+            code_preview,
+        )
         # 7. החזרת פורמט נקי ומובנה שהסוכן החוקר יכול לקרוא בקלות
         return f"--- FOUND DEPENDENCY IN {relative_path} ---\n\n{source_code}\n"
         
     except Exception as e:
-        print(f"❌ Error in search_dependencies_bm25: {str(e)}")
+        logger.error("Error in search_dependencies_bm25: %s", e)
         return f"Error during dependency search: {str(e)}"
 
 @tool
@@ -106,7 +109,7 @@ def search_golden_tests_semantic(query: str, config: RunnableConfig = None) -> s
     
     RETURNS: A formatted string of reference test code chunks (Golden Seeds).
     """
-    print("search_golden_tests_semantic query:", query)
+    logger.debug("search_golden_tests_semantic query: %s", query)
     try:
         vdb = config["configurable"]["vdb"]
         
@@ -132,7 +135,7 @@ def search_source_code_semantic(query: str, config: RunnableConfig = None) -> st
     
     RETURNS: A formatted string of production code chunks.
     """
-    print("search_source_code_semantic query:", query)
+    logger.debug("search_source_code_semantic query: %s", query)
     try:
         vdb = config["configurable"]["vdb"]
         

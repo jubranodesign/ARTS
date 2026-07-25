@@ -2,6 +2,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from shared.logging_config import configure_logging
+
+configure_logging()
+
 from langchain_core.messages import HumanMessage
 from graph.builder import build_app
 from services.code_processor import CodeProcessor

@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 FIX_PROMPT_REGISTRY = {
     "ModuleNotFoundError": """
     ### MANDATORY REPAIR INSTRUCTION:

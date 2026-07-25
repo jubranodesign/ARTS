@@ -1,12 +1,15 @@
 from langgraph.graph.state import RunnableConfig
+import logging
 from graph.state import AgentState
 from ml_predictor.utils import predict_risk
 from utils.paths import extract_python_path
 from utils.repo_files import read_repo_text
 
+logger = logging.getLogger(__name__)
+
 
 def wait_for_task(state: AgentState, config: RunnableConfig):
-    print("wait_for_task")
+    logger.debug("wait_for_task")
     repo_path = config["configurable"]["repo_path"]
     # נניח שתוכן הקובץ נמצא ב-state או שאנחנו קוראים אותו מנתיב
     user_task = state.get("user_input")

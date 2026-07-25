@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def apply_search_replace_patch(content: str, patch_content: str) -> tuple[str | None, str | None]:
     """
     Apply SEARCH/REPLACE patch_content to file content.
@@ -33,7 +38,7 @@ def apply_search_replace_patch(content: str, patch_content: str) -> tuple[str | 
     if search_part in content and search_part != "":
         new_content = content.replace(search_part, replace_part, 1)
     else:
-        print("⚠️ Full block not found. Falling back to line-by-line matching...")
+        logger.warning("Full block not found. Falling back to line-by-line matching...")
 
         search_lines = [line.strip() for line in search_part.split("\n") if line.strip()]
         replace_lines = [line.strip() for line in replace_part.split("\n") if line.strip()]
@@ -58,7 +63,7 @@ def apply_search_replace_patch(content: str, patch_content: str) -> tuple[str | 
                 new_content = new_content.replace(found_line, current_replace, 1)
                 changes_made = True
             else:
-                print(f"🔍 Line ignored (not found in file): {line}")
+                logger.debug("Line ignored (not found in file): %s", line)
 
         if not changes_made and replace_part != "":
             return None, (

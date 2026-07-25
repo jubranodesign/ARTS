@@ -1,6 +1,10 @@
+import logging
+
 from langchain_chroma import Chroma
 
 from shared.config import VECTOR_STORE_PATH, get_embeddings_model
+
+logger = logging.getLogger(__name__)
 
 
 class VectorDBService:
@@ -10,7 +14,7 @@ class VectorDBService:
         collection_name: str = "codebase_index",
     ):
         path = persist_directory or VECTOR_STORE_PATH
-        print(f"📡 Initializing Chroma connection at: {path}")
+        logger.info("Initializing Chroma connection at: %s", path)
         self._db = Chroma(
             collection_name=collection_name,
             persist_directory=path,
@@ -26,16 +30,16 @@ class VectorDBService:
         שימוש ב-add_documents בלבד.
         """
         if not chunks:
-            print("⚠️ No chunks provided to save.")
+            logger.warning("No chunks provided to save.")
             return False
 
         try:
-            print(f"➕ Adding {len(chunks)} chunks to the vector store...")
+            logger.info("Adding %s chunks to the vector store...", len(chunks))
             self.db.add_documents(chunks)
-            print("✅ Data persisted successfully.")
+            logger.info("Data persisted successfully.")
             return True
         except Exception as e:
-            print(f"❌ Error adding documents: {e}")
+            logger.error("Error adding documents: %s", e)
             return False
 
     def search_code(self, query: str, k: int = 5, filter_dict: dict = None) -> str:
@@ -44,7 +48,7 @@ class VectorDBService:
             return "🔍 Database is currently empty."
 
         docs = self.db.similarity_search(query, k=k, filter=filter_dict)
-        print(f"search_code docs: {docs}")
+        logger.debug("search_code docs: %s", docs)
 
         formatted_results = []
         for i, doc in enumerate(docs):
@@ -60,8 +64,7 @@ class VectorDBService:
             des = f"DESCRIPTION: {doc.page_content}"
 
             formatted_results.append(f"{header}\n{des}\n{source_code}")
-        print("search_code formatted_results: ")
-        print("\n\n".join(formatted_results))
+        logger.debug("search_code formatted_results:\n%s", "\n\n".join(formatted_results))
         return "\n\n".join(formatted_results)
 
     def clear_db(self):
@@ -69,4 +72,4 @@ class VectorDBService:
         ids = self.db._collection.get()["ids"]
         if ids:
             self.db._collection.delete(ids)
-            print("🗑️ Database cleared.")
+            logger.info("Database cleared.")

@@ -1,8 +1,13 @@
-from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
-from ragas import evaluate
+import logging
+
 from datasets import Dataset
+from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
 
 from shared.config import get_embeddings_model, get_model
+
+logger = logging.getLogger(__name__)
+
 
 def evaluate_quality(question, final_dump, message_history, ground_truth):
     """
@@ -17,11 +22,11 @@ def evaluate_quality(question, final_dump, message_history, ground_truth):
         msg.content for msg in message_history 
         if getattr(msg, 'type', '') == 'tool'
     ]
-    print(f"extracted_contexts: {extracted_contexts}")
-    print(f"final_dump: {final_dump}")
-    print(f"ground_truth: {ground_truth}")
-    print(f"question: {question}")
-    print(f"message_history: {message_history}")
+    logger.debug("extracted_contexts: %s", extracted_contexts)
+    logger.debug("final_dump: %s", final_dump)
+    logger.debug("ground_truth: %s", ground_truth)
+    logger.debug("question: %s", question)
+    logger.debug("message_history: %s", message_history)
 
     # 2. בניית ה-Sample ל-Ragas
     sample = {
@@ -57,11 +62,15 @@ def run_evaluation_suite(results_to_evaluate):
     """
     batch_scores = []
     
-    print(f"📊 Starting Evaluation Suite on {len(results_to_evaluate)} results...")
-    print("-" * 50)
+    logger.info("Starting Evaluation Suite on %s results...", len(results_to_evaluate))
 
     for i, item in enumerate(results_to_evaluate):
-        print(f"⚖️ Judging Case {i+1}/{len(results_to_evaluate)}: {item['question']}")
+        logger.info(
+            "Judging case %s/%s: %s",
+            i + 1,
+            len(results_to_evaluate),
+            item['question'],
+        )
         
         # שימוש בפונקציה הקיימת שלך על כל פריט ברשימה
         result = evaluate_quality(
@@ -78,5 +87,5 @@ def run_evaluation_suite(results_to_evaluate):
             "scores": result
         })
 
-    print("\n✅ Evaluation Suite Finished.")
+    logger.info("Evaluation Suite finished.")
     return batch_scores

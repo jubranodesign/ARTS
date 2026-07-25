@@ -1,6 +1,9 @@
 
 # ייבוא השירותים שבנינו
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 from langchain_core.documents import Document
 from services.document_factory import DocumentFactory
 from services.scanner import CodeScanner
@@ -21,9 +24,13 @@ def run_ingestion(
     repo_path: str | None = None,
     processor=None,
 ):
-    print("--- 🏁 The script has started! ---")
+    logger.info("Ingestion script started")
     resolved_repo = repo_path or get_repo_path()
-    print(f"🚀 Starting ingestion for: {resolved_repo} (Mode: {'Test/Seed' if is_test else 'Source Code'})")
+    logger.info(
+        "Starting ingestion for: %s (Mode: %s)",
+        resolved_repo,
+        "Test/Seed" if is_test else "Source Code",
+    )
 
     scanner = CodeScanner()
     factory = DocumentFactory()
@@ -46,7 +53,7 @@ def run_ingestion(
         # 🎯 שלב ד' + ה': בניית אינדקס מילות מפתח ושמירה לדיסק - רק עבור קוד מקור!
         dependency_retriever = None
         if not is_test:
-            print("🔍 Building BM25 keyword index for source code...")
+            logger.info("Building BM25 keyword index for source code...")
             bm25_documents = prepare_bm25_documents(chunks)
             
             dependency_retriever = BM25Retriever.from_documents(
@@ -58,23 +65,20 @@ def run_ingestion(
             bm25_index_path = os.path.join(DATA_DIR, "bm25_index.pkl")
             with open(bm25_index_path, "wb") as f:
                 pickle.dump(dependency_retriever, f)
-            print(f"✅ BM25 index saved to: {bm25_index_path}")
+            logger.info("BM25 index saved to: %s", bm25_index_path)
         else:
-            print("ℹ️ Skipping BM25 indexing (Not required for Seed/Test data).")
+            logger.info("Skipping BM25 indexing (not required for Seed/Test data)")
 
         # בדיקת הצלחה מותאמת למצב הריצה
         is_successful = success and (is_test or dependency_retriever is not None)
 
         if is_successful:
-            print("\n" + "="*30)
-            print("✅ INGESTION COMPLETED SUCCESSFULLY!")
-            print(f"📂 Data is now persisted in: {VECTOR_STORE_PATH}")
-            print("="*30)
+            logger.info("Ingestion completed successfully; data persisted in: %s", VECTOR_STORE_PATH)
         else:
-            print("❌ Ingestion failed during database saving.")
+            logger.error("Ingestion failed during database saving")
 
     except Exception as e:
-        print(f"❌ An unexpected error occurred: {e}")
+        logger.error("Unexpected error during ingestion: %s", e)
 
 
 if __name__ == "__main__":
@@ -85,6 +89,9 @@ if __name__ == "__main__":
     from shared.repo_cli import add_repo_path_argument, resolve_repo_path
 
     load_dotenv()
+    from shared.logging_config import configure_logging
+
+    configure_logging()
     parser = argparse.ArgumentParser(description="Ingest repository code into the vector store.")
     add_repo_path_argument(parser)
     parser.add_argument(

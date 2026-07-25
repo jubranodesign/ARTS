@@ -1,4 +1,5 @@
 from langchain_core.messages import SystemMessage
+import logging
 from langgraph.graph.state import RunnableConfig
 from agents.researcher_agent.prompts import RESEARCHER_SYSTEM_PROMPT
 from agents.researcher_agent.tools import RESEARCHER_TOOLS
@@ -8,6 +9,8 @@ from utils.paths import extract_python_path
 from utils.repo_files import read_repo_text_tool_response
 from utils.state import format_risk_context
 from utils.utils import get_trimmed_messages
+
+logger = logging.getLogger(__name__)
 
 # הצמדת הכלים למופע המשותף
 
@@ -77,7 +80,10 @@ def call_researcher(state: AgentState, config: RunnableConfig):
               state_update["target_file"] = target_file
         return state_update     
     except Exception as e:
-        print(f"❌ Gemini Error: {e}")
+        logger.error("Gemini Error: %s", e)
         # הדפסת סדר ההודעות לדיבאג במקרה של שגיאת פורמט
-        print("Sequence: " + " -> ".join([type(m).__name__ for m in messages_to_send]))
+        logger.debug(
+            "Sequence: %s",
+            " -> ".join([type(m).__name__ for m in messages_to_send]),
+        )
         raise e

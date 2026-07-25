@@ -1,11 +1,21 @@
+import logging
+import re
+
 from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
 from langgraph.graph.state import RunnableConfig
+
 from agents.researcher_agent.prompts import ARCHITECT_SUMMARY_PROMPT
 from graph.state import AgentState
 from shared.config import setup_node_llm
-from utils.utils import extract_message_by_content, filter_only_successful_tests, get_all_processed_tool_data, get_clean_text
-import re
-from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage
+from utils.utils import (
+    extract_message_by_content,
+    filter_only_successful_tests,
+    get_all_processed_tool_data,
+    get_clean_text,
+)
+
+logger = logging.getLogger(__name__)
+
 
 def summarize_architecture(state: AgentState, config: RunnableConfig):
     """
@@ -20,14 +30,14 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     # 1. שליפת חתיכות הטסטים וה-Dump מהחוקר
     raw_test_chunks = get_all_processed_tool_data(all_messages, filter_func=filter_only_successful_tests)
     raw_research = extract_message_by_content(all_messages, "### RESEARCH_DATA_DUMP ###")
-    print(f" raw_test_chunks: {raw_test_chunks}")
+    logger.debug("raw_test_chunks: %s", raw_test_chunks)
         
     if not raw_research:
-        print("❌ Critical Error: No '### RESEARCH_DATA_DUMP ###' found in Researcher history.")
+        logger.error("Critical Error: No '### RESEARCH_DATA_DUMP ###' found in Researcher history.")
         return {}
     
     clean_research = get_clean_text(raw_research)
-    print(f" summarize_architecture clean_research: {clean_research}")
+    logger.debug("summarize_architecture clean_research: %s", clean_research)
 
     # ערכי ברירת מחדל למקרה שאין טסטים במאגר
     golden_test_summary = "None"
@@ -36,7 +46,7 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     # 🎯 קריאה ל-LLM תתבצע אך ורק אם קיימים טסטים מוצלחים במאגר
     if raw_test_chunks.strip():
         test_chunks_formatted = f"--- REFERENCE TEST CHUNKS ---\n{raw_test_chunks}"
-        print(f" test_chunks: {test_chunks_formatted}")
+        logger.debug("test_chunks: %s", test_chunks_formatted)
         
         summary_instr = ARCHITECT_SUMMARY_PROMPT.format(
             test_chunks=test_chunks_formatted,
@@ -64,14 +74,16 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
                 confidence_score = 0.0
 
         except Exception as e:
-            print(f"❌ Error during LLM invoke: {e}")
+            logger.error("Error during LLM invoke: %s", e)
             raise e
     else:
-        print("No successful reference tests discovered in vector store. Skipping LLM call.")
+        logger.info("No successful reference tests discovered in vector store. Skipping LLM call.")
 
-    # 🎯 מקום אחד מרכזי ואחיד להדפסת הלוגים של העדכון
-    print(f"✅ Architecture snapshot updated. Golden Tests Summary Extracted!: {golden_test_summary}")
-    print(f"✅ Architecture snapshot updated. Confidence: {confidence_score}")
+    logger.info(
+        "Architecture snapshot updated. Golden tests summary extracted (confidence=%s)",
+        confidence_score,
+    )
+    logger.debug("Golden test summary: %s", golden_test_summary)
 
     # ניקוי הודעות והחזרת המבנה ל-State
     delete_messages = [RemoveMessage(id=m.id) for m in all_messages if m.id]

@@ -1,11 +1,16 @@
+import logging
+
 from langchain_core.messages import SystemMessage
 from langgraph.graph.state import RunnableConfig
+
 from agents.designer_agent.prompts import DESIGNER_PROMPT_TEMPLATE
 from agents.shared.agent_tools import AGENT_TOOLS
 from graph.state import AgentState
 from shared.config import setup_node_llm
 from shared.logging_rules import SHARED_LOGGING_RULES
 from utils.utils import build_agent_messages
+
+logger = logging.getLogger(__name__)
 
 
 def call_designer(state: AgentState, config: RunnableConfig):
@@ -37,16 +42,20 @@ def call_designer(state: AgentState, config: RunnableConfig):
         llm=llm
     )
 
-    # דיבאג (חשוב כדי לראות שאין כפילות של System)
-    print(f"DEBUG: Designer node - Messages count: {len(messages_to_send)}")
-    print(f"DEBUG: Sequence types: {[type(m).__name__ for m in messages_to_send]}")
+    logger.debug(
+        "Designer node messages count=%s sequence_types=%s",
+        len(messages_to_send),
+        [type(m).__name__ for m in messages_to_send],
+    )
 
     # 5. קריאה למודל
     try:
         response = llm.invoke(messages_to_send)
         return {"messages": [response]}
     except Exception as e:
-        print(f"❌ Designer LLM Error: {e}")
-        # הדפסת הרצף במקרה של שגיאה (עוזר מאוד עם Llama/Gemini)
-        print("Final Sequence: " + " -> ".join([type(m).__name__ for m in messages_to_send]))
+        logger.error("Designer LLM Error: %s", e)
+        logger.debug(
+            "Final sequence: %s",
+            " -> ".join([type(m).__name__ for m in messages_to_send]),
+        )
         raise e

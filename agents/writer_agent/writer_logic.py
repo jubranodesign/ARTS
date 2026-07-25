@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
+import logging
+
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langgraph.graph.state import RunnableConfig
 
@@ -10,6 +12,8 @@ from shared.config import MOCK_TOOL, TEST_FRAMEWORK
 from shared.logging_rules import SHARED_LOGGING_RULES
 from utils.failure_analyzer import analyze_test_failure
 from utils.utils import count_test_cases_from_list, get_import_path, get_test_path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -28,10 +32,10 @@ def handle_post_tool_success(state: AgentState) -> Optional[dict]:
         return None
 
     last_tool_msg = messages[-1]
-    print("last_tool_msg.name ", last_tool_msg.name)
+    logger.debug("last_tool_msg.name %s", last_tool_msg.name)
 
     if last_tool_msg.name == "patch_test_code":
-        print("last_tool_msg.content ", last_tool_msg.content)
+        logger.debug("last_tool_msg.content %s", last_tool_msg.content)
 
     if (
         last_tool_msg.name == "write_local_file"
@@ -47,10 +51,7 @@ def handle_post_tool_success(state: AgentState) -> Optional[dict]:
         last_tool_msg.name == "patch_test_code"
         and "SUCCESSFULLY" in last_tool_msg.content.upper()
     ):
-        print(
-            "🔄 Patch applied successfully! Resetting state status and"
-            " routing to executor..."
-        )
+        logger.info("Patch applied successfully; resetting state status and routing to executor")
         return {
             "messages": [
                 AIMessage(
@@ -71,7 +72,7 @@ def build_writer_context(state: AgentState, config: RunnableConfig) -> WriterCon
     import_path = get_import_path(target_file)
     test_file_path = get_test_path(target_file)
     root_package = target_file.split("/")[0] if "/" in target_file else ""
-    print("root_package: ", root_package)
+    logger.debug("root_package: %s", root_package)
 
     return WriterContext(
         repo_path=config["configurable"]["repo_path"],
@@ -110,7 +111,7 @@ def build_generate_messages(ctx: WriterContext, state: AgentState) -> tuple[Syst
     architecture_summary = state.get("architecture_summary", "No summary available")
     golden_test_summary = state.get("golden_test_summary", "No golden test summary available")
 
-    print("call_writer golden_example: ", golden_test_summary)
+    logger.debug("call_writer golden_example: %s", golden_test_summary)
 
     full_prompt = WRITER_PROMPT_TEMPLATE.format(
         repo_path=ctx.repo_path,

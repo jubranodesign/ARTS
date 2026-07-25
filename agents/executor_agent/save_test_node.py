@@ -1,8 +1,13 @@
+import logging
 from pathlib import Path
+
 from langgraph.graph.state import RunnableConfig
+
 from graph.state import AgentState
 from services.document_factory import DocumentFactory
 from utils.repo_files import resolve_repo_file
+
+logger = logging.getLogger(__name__)
 
 
 def save_test_node(state: AgentState, config: RunnableConfig):
@@ -35,10 +40,10 @@ def save_test_node(state: AgentState, config: RunnableConfig):
     if doc:
         # כאן ה-Processor חותך את ה-Document ל-Chunks
         chunks = processor.process([doc])
-        print("save_test_node chunks: ", chunks)
+        logger.debug("save_test_node chunks: %s", chunks)
 
         # וה-DB Service שומר אותם ב-ChromaDB
         db_service.save_documents(chunks)
-        print(f"✨ Self-Feeding: Successfully indexed new test: {rel_path}")
+        logger.info("Self-Feeding: successfully indexed new test: %s", rel_path)
 
     return state

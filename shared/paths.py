@@ -1,4 +1,7 @@
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -6,7 +9,7 @@ VECTOR_STORE_PATH = os.path.join(DATA_DIR, "vector_store")
 
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
-    print(f"📁 Created missing directory: {DATA_DIR}")
+    logger.info("Created missing directory: %s", DATA_DIR)
 
 _REPO_PATH_HELP = (
     "REPO_PATH is required. Set it in your environment (e.g. .env) "

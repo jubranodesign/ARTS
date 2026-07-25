@@ -1,3 +1,5 @@
+import logging
+
 import os
 
 from langchain_core.runnables import RunnableConfig
@@ -11,6 +13,8 @@ from utils.repo_files import (
     write_repo_text,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @tool
 def write_local_file(file_path: str, content: str, config: RunnableConfig) -> str:
@@ -21,7 +25,7 @@ def write_local_file(file_path: str, content: str, config: RunnableConfig) -> st
     try:
         repo_path = repo_path_from_config(config)
         full_path = write_repo_text(repo_path, file_path, content)
-        print(f"\n💾 [TOOL CALL] Writing file: {full_path}")
+        logger.info("Writing file: %s", full_path)
         return f"SUCCESS: File written to absolute path: {full_path}"
     except Exception as e:
         return f"Error writing file: {str(e)}"
@@ -38,7 +42,7 @@ def patch_test_code(file_path: str, patch_content: str, config: RunnableConfig) 
     new code
     >>>>>>> REPLACE
     """
-    print(f"patch_test_code patch_content: {patch_content}")
+    logger.debug("patch_test_code patch_content: %s", patch_content)
     try:
         repo_path = repo_path_from_config(config)
         full_path = resolve_repo_file(repo_path, file_path)
@@ -53,7 +57,7 @@ def patch_test_code(file_path: str, patch_content: str, config: RunnableConfig) 
 
         write_repo_text(repo_path, file_path, new_content)
 
-        print("patch_test_code Successfully patched")
+        logger.info("patch_test_code successfully patched %s", file_path)
         return f"Successfully patched {file_path}."
 
     except Exception as e:

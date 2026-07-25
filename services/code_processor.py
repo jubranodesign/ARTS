@@ -1,6 +1,11 @@
+import logging
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT
 from shared.config import get_model
+
+logger = logging.getLogger(__name__)
+
 
 class CodeProcessor:
     def __init__(self, provider: str = "groq", summary_prompt=CHUNK_SUMMARY_PROMPT):
@@ -13,7 +18,7 @@ class CodeProcessor:
         
         # 2. אתחול מודל ה-LLM עבור תהליך ה-Ingestion באמצעות ה-provider שהוזרק
         # אנו מקבעים temperature=0 כדי להבטיח תיאורים עובדתיים, מדויקים ויציבים
-        print(f"🤖 CodeProcessor initializing LLM for ingestion using provider: {provider}")
+        logger.info("CodeProcessor initializing LLM for ingestion using provider: %s", provider)
         self.llm = get_model(provider=provider, temperature=0)
         self.summary_prompt = summary_prompt
 
@@ -23,13 +28,13 @@ class CodeProcessor:
         במבנה Multi-Vector (התוכן הופך לתיאור, והקוד נשמר ב-Metadata).
         """
         if not documents:
-            print("⚠️ No documents to process.")
+            logger.warning("No documents to process.")
             return []
 
         # שלב א': חיתוך גולמי של הקבצים לצ'אנקים
-        print(f"✂️  Splitting {len(documents)} files into logical chunks...")
+        logger.info("Splitting %s files into logical chunks...", len(documents))
         chunks = self.splitter.split_documents(documents)
-        print(f"✅ Created {len(chunks)} raw chunks. Starting semantic enrichment...")
+        logger.info("Created %s raw chunks. Starting semantic enrichment...", len(chunks))
 
         enriched_chunks = []
 
@@ -57,9 +62,14 @@ class CodeProcessor:
             except Exception as e:
                 # מנגנון הגנה: אם קריאת ה-LLM נכשלת, לא שוברים את ה-Ingestion.
                 # שומרים את ה-Chunk כפי שהוא (עם הקוד ב-Content) כדי שהמידע לא יאבד.
-                print(f"❌ Error enriching chunk {i} in {chunk.metadata.get('file_name', 'unknown')}: {e}")
+                logger.error(
+                    "Error enriching chunk %s in %s: %s",
+                    i,
+                    chunk.metadata.get("file_name", "unknown"),
+                    e,
+                )
                 chunk.metadata["source_code"] = original_code
                 enriched_chunks.append(chunk)
 
-        print(f"🚀 Successfully enriched {len(enriched_chunks)} chunks for Multi-Vector RAG.")
+        logger.info("Successfully enriched %s chunks for Multi-Vector RAG.", len(enriched_chunks))
         return enriched_chunks
