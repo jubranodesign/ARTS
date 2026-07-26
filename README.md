@@ -127,4 +127,4 @@ Runs persist LangGraph state to `checkpoints.sqlite` (or `CHECKPOINT_DB`). Re-us
 - Entry points call `configure_logging()` after `load_dotenv()`. `build_app()` does **not** change log level, so `LOG_LEVEL=DEBUG` stays active for the whole run.
 - Do not commit `.env` or `data/vector_store/` (see `.gitignore`).
 
-For deeper evaluation workflows, see scripts under `evaluation/`.
+For deeper evaluation workflows, see scripts under `evaluation/`. **Ground truth** for Ragas/metrics lives in evaluation datasets (e.g. `evaluation/rag/researcher_agent/datasets.py`), not in `main.py` or `GRAPH_CONFIG`.

@@ -23,11 +23,6 @@ from utils.utils import get_clean_text
 _RUN_CONFIG_DEFAULTS: dict = {
     "thread_id": "test_session_001",
     "model_provider": get_default_model_provider(),
-    "ground_truth": (
-        "The scraper service orchestrates data pull via fetch_studies and persists it "
-        "using a session context manager with a single commit after the loop. Key "
-        "dependencies are common.db and common.repositories."
-    ),
 }
 
 
