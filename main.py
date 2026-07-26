@@ -19,19 +19,14 @@ from utils.utils import get_clean_text
 
 # טעינת משתני סביבה (API Keys) — load_dotenv() runs at top of this module
 
-_STREAM_CONFIG_DEFAULTS: dict = {
-    "thread_id": "test_invoke_session_001",
+_RUN_CONFIG_DEFAULTS: dict = {
+    "thread_id": "test_session_001",
     "model_provider": "mistral",
     "ground_truth": (
         "The scraper service orchestrates data pull via fetch_studies and persists it "
         "using a session context manager with a single commit after the loop. Key "
         "dependencies are common.db and common.repositories."
     ),
-}
-
-_INVOKE_CONFIG_DEFAULTS: dict = {
-    "thread_id": "test_invoke_session_001",
-    "model_provider": "groq",
 }
 
 
@@ -155,7 +150,7 @@ def _run_test_system_stream_impl(
         repo_path,
         vdb_instance,
         proc,
-        defaults=_STREAM_CONFIG_DEFAULTS,
+        defaults=_RUN_CONFIG_DEFAULTS,
         configurable=configurable,
     )
     thread_id = config["configurable"]["thread_id"]
@@ -267,92 +262,6 @@ def _run_test_system_stream_impl(
         ))
 
 
-def run_test_system(
-    repo_path: str,
-    vdb: VectorDBService | None = None,
-    processor: CodeProcessor | None = None,
-    user_task: str | None = None,
-    configurable: dict | None = None,
-):
-    app, conn = build_app()
-    try:
-        _run_test_system_impl(
-            app,
-            repo_path,
-            vdb=vdb,
-            processor=processor,
-            user_task=user_task,
-            configurable=configurable,
-        )
-    finally:
-        conn.close()
-        print("Cleanup: SQLite connection closed.")
-
-
-def _run_test_system_impl(
-    app,
-    repo_path: str,
-    vdb: VectorDBService | None = None,
-    processor: CodeProcessor | None = None,
-    user_task: str | None = None,
-    configurable: dict | None = None,
-):
-    vdb_instance = vdb or VectorDBService()
-    proc = processor or CodeProcessor()
-    config = build_graph_run_config(
-        repo_path,
-        vdb_instance,
-        proc,
-        defaults=_INVOKE_CONFIG_DEFAULTS,
-        configurable=configurable,
-    )
-    user_task = resolve_user_task(user_task)
-
-    print(f"🚀 Starting Test Agent System (STRICT INVOKE MODE)")
-    print(f"Target Task: {user_task}")
-    print("-" * 50)
-
-    try:
-        # 2. הרצה ראשונית עד ה-Interrupt (wait_for_task)
-        # אנחנו שולחים הודעה ריקה רק כדי להביא את הגרף לנקודת העצירה
-        app.invoke({"messages": []}, config=config)
-
-        # 3. הזרקת המשימה לתוך ה-State
-        # חשוב: אנחנו מזריקים גם את האובייקט HumanMessage וגם את הסטרינג user_input
-        print("📥 Injecting task and human message into state...")
-        app.update_state(
-            config, 
-            {
-                "user_input": user_task, 
-                "messages": [HumanMessage(content=user_task)]
-            }, 
-            as_node="wait_for_task"
-        )
-
-        # 4. הרצה מהעצירה ועד הסוף
-        # שליחת None אומרת לגרף: "תמשיך מהמקום שבו עצרת ב-thread_id הזה"
-        print("⏳ Running agents (Researcher -> Summarizer -> Designer)...")
-        final_result = app.invoke(None, config=config)
-
-        # 5. הצגת התוצאה
-        messages = final_result.get("messages", [])
-        if messages:
-            last_msg = messages[-1]
-            print("\n" + "="*50)
-            print("✅ FINAL DESIGNER OUTPUT:")
-            print("="*50)
-            print(last_msg.content)
-            print("="*50)
-        else:
-            print("⚠️ System finished but no messages were found in state.")
-
-    except Exception as e:
-        print(f"\n❌ CRITICAL ERROR during invoke: {e}")
-        # אם יש שגיאה, ננסה לשלוף את המצב האחרון לדיבאג
-        current_state = app.get_state(config)
-        print(f"Last Node Reached: {current_state.next}")
-
-
 def run_ingest_only(
     repo_path: str,
     ingest: str = "both",
@@ -376,37 +285,26 @@ def run_ingest_only(
 def run_agent_only(
     repo_path: str,
     *,
-    invoke: bool = False,
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
     configurable: dict | None = None,
 ) -> None:
-    """Run the LangGraph agent only (assumes vector store already populated if needed)."""
+    """Run the LangGraph agent (streaming) only."""
     vdb_instance = vdb or VectorDBService()
-    if invoke:
-        run_test_system(
-            repo_path,
-            vdb=vdb_instance,
-            processor=processor,
-            user_task=user_task,
-            configurable=configurable,
-        )
-    else:
-        run_test_system_stream(
-            repo_path,
-            vdb=vdb_instance,
-            processor=processor,
-            user_task=user_task,
-            configurable=configurable,
-        )
+    run_test_system_stream(
+        repo_path,
+        vdb=vdb_instance,
+        processor=processor,
+        user_task=user_task,
+        configurable=configurable,
+    )
 
 
 def run_pipeline(
     repo_path: str,
     *,
     ingest: str | None = None,
-    invoke: bool = False,
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
@@ -422,7 +320,6 @@ def run_pipeline(
         vdb_instance = run_ingest_only(repo_path, ingest, vdb=vdb_instance)
     run_agent_only(
         repo_path,
-        invoke=invoke,
         vdb=vdb_instance,
         processor=processor,
         user_task=user_task,
@@ -438,11 +335,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the agentic test system.")
     add_repo_path_argument(parser)
     parser.add_argument(
-        "--invoke",
-        action="store_true",
-        help="Use strict invoke mode instead of the default streaming run.",
-    )
-    parser.add_argument(
         "--task",
         default=None,
         help="Agent task prompt (default: USER_TASK env or built-in analysis_service request).",
@@ -451,7 +343,4 @@ if __name__ == "__main__":
     repo_path = resolve_repo_path(args.repo_path)
     user_task = resolve_user_task(args.task)
 
-    if args.invoke:
-        run_test_system(repo_path, user_task=user_task)
-    else:
-        run_test_system_stream(repo_path, user_task=user_task)
+    run_test_system_stream(repo_path, user_task=user_task)
