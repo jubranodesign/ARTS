@@ -1,6 +1,6 @@
-# Agentic Test System
+# ARTS
 
-LangGraph multi-agent pipeline that ingests a target repository, scores code risk with an ML model, runs retrieval-augmented research, and generates pytest files **inside your repo** under test.
+**Agentic Repo Test System** — LangGraph multi-agent pipeline that ingests a target repository, scores code risk with an ML model, runs retrieval-augmented research, and generates pytest files **inside your repo** under test.
 
 **License:** [MIT](LICENSE) · **Status:** early open source — active development; [contributions welcome](CONTRIBUTING.md).
 
@@ -27,7 +27,7 @@ For a one-page cheat sheet, see [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
 ```bash
 git clone <your-repo-url>
-cd agentic_test_system_project_v2
+cd arts
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 # Linux/macOS: source .venv/bin/activate

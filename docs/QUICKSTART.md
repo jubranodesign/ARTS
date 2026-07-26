@@ -1,6 +1,6 @@
-# Quickstart (condensed)
+# ARTS — Quickstart (condensed)
 
-Full details: [README.md](../README.md).
+**Agentic Repo Test System.** Full details: [README.md](../README.md).
 
 **Demos:** [LinkedIn (~5 min)](https://www.linkedin.com/feed/update/urn:li:activity:7470499709799821313/) · [YouTube (~30 min)](https://www.youtube.com/watch?v=hKFgm7mVf7I)
 

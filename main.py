@@ -317,7 +317,9 @@ if __name__ == "__main__":
 
     from shared.repo_cli import add_repo_path_argument, resolve_repo_path
 
-    parser = argparse.ArgumentParser(description="Run the agentic test system.")
+    parser = argparse.ArgumentParser(
+        description="Run ARTS (Agentic Repo Test System)."
+    )
     add_repo_path_argument(parser)
     parser.add_argument(
         "--task",

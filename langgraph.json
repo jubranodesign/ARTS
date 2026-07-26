@@ -2,7 +2,7 @@
   "$schema": "https://langgra.ph/schema.json",
   "dependencies": ["."],
   "graphs": {
-    "agent": "./graph/builder.py:app"
+    "arts": "./graph/builder.py:app"
   },
   "env": ".env"
 }

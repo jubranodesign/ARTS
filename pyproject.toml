@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentic-test-system"
+name = "arts"
 version = "0.1.0"
-description = "Agentic test system (LangGraph)"
+description = "ARTS — Agentic Repo Test System (LangGraph multi-agent pytest generation)"
 requires-python = ">=3.10"
 dependencies = [
     "langgraph>=0.2.70",

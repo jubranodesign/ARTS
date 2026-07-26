@@ -1,6 +1,6 @@
-# Contributing
+# Contributing to ARTS
 
-Thank you for considering a contribution. This project is **early open source** ([MIT](LICENSE)) — active development; APIs and graph behavior may change. Issues, docs, and focused PRs are welcome.
+Thank you for considering a contribution to **ARTS** (*Agentic Repo Test System*). This project is **early open source** ([MIT](LICENSE)) — active development; APIs and graph behavior may change. Issues, docs, and focused PRs are welcome.
 
 ## Before you start
 
