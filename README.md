@@ -93,6 +93,8 @@ Example: `GRAPH_CONFIG = {"model_provider": "groq", "thread_id": "dev-1"}` in `r
 
 Single source for merge/validation: `shared/graph_config.py`. Defaults for provider/thread: `shared/run_policy.py` + `DEFAULT_THREAD_ID` in graph_config.
 
+**Vector DB:** `run_test_system_stream`, `run_agent_only`, `run_ingest_only`, and `run_pipeline` require a **`VectorDBService` instance** (no hidden `VectorDBService()` inside). Entry points create it once — e.g. `main.py` CLI and `run_local.py` call `create_vector_db()` from `main`, and `ingest.py` CLI constructs `VectorDBService()` before ingestion. Pass the same instance through `run_pipeline` for ingest + agent.
+
 ## Risk gate
 
 After `wait_for_task`, a random-forest risk score is computed on the target file.

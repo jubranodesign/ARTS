@@ -21,6 +21,11 @@ from utils.utils import get_clean_text
 # טעינת משתני סביבה (API Keys) — load_dotenv() runs at top of this module
 
 
+def create_vector_db() -> VectorDBService:
+    """Construct VDB at entry points (CLI, run_local); do not use inside graph runners."""
+    return VectorDBService()
+
+
 def build_graph_run_config(
     repo_path: str,
     vdb: VectorDBService,
@@ -99,7 +104,7 @@ def print_current_db_state(app, thread_id):
 
 def run_test_system_stream(
     repo_path: str,
-    vdb: VectorDBService | None = None,
+    vdb: VectorDBService,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
     configurable: dict | None = None,
@@ -125,16 +130,15 @@ def _run_test_system_stream_impl(
     console,
     app,
     repo_path: str,
-    vdb: VectorDBService | None = None,
+    vdb: VectorDBService,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
     configurable: dict | None = None,
 ):
-    vdb_instance = vdb or VectorDBService()
     proc = processor or CodeProcessor()
     config = build_graph_run_config(
         repo_path,
-        vdb_instance,
+        vdb,
         proc,
         configurable=configurable,
     )
@@ -249,37 +253,34 @@ def _run_test_system_stream_impl(
 
 def run_ingest_only(
     repo_path: str,
-    ingest: str = "both",
-    vdb: VectorDBService | None = None,
-) -> VectorDBService:
+    ingest: str,
+    vdb: VectorDBService,
+) -> None:
     """Ingest seed/source/both into Chroma (+ BM25 on source). No graph run."""
     from ingest import IngestMode, run_both_ingestion, run_ingestion_for_repo
 
-    vdb_instance = vdb or VectorDBService()
     if ingest == "both":
-        run_both_ingestion(vdb_instance, repo_root=repo_path)
+        run_both_ingestion(vdb, repo_root=repo_path)
     elif ingest == "seed":
-        run_ingestion_for_repo(vdb_instance, IngestMode.SEED, repo_root=repo_path)
+        run_ingestion_for_repo(vdb, IngestMode.SEED, repo_root=repo_path)
     elif ingest == "source":
-        run_ingestion_for_repo(vdb_instance, IngestMode.SOURCE, repo_root=repo_path)
+        run_ingestion_for_repo(vdb, IngestMode.SOURCE, repo_root=repo_path)
     else:
         raise ValueError(f"Unknown ingest mode: {ingest!r}")
-    return vdb_instance
 
 
 def run_agent_only(
     repo_path: str,
+    vdb: VectorDBService,
     *,
-    vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
     configurable: dict | None = None,
 ) -> None:
     """Run the LangGraph agent (streaming) only."""
-    vdb_instance = vdb or VectorDBService()
     run_test_system_stream(
         repo_path,
-        vdb=vdb_instance,
+        vdb,
         processor=processor,
         user_task=user_task,
         configurable=configurable,
@@ -288,9 +289,9 @@ def run_agent_only(
 
 def run_pipeline(
     repo_path: str,
+    vdb: VectorDBService,
     *,
     ingest: str | None = None,
-    vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
     configurable: dict | None = None,
@@ -300,12 +301,11 @@ def run_pipeline(
 
     ingest: None | \"both\" | \"seed\" | \"source\" (None = agent only)
     """
-    vdb_instance = vdb or VectorDBService()
     if ingest is not None:
-        vdb_instance = run_ingest_only(repo_path, ingest, vdb=vdb_instance)
+        run_ingest_only(repo_path, ingest, vdb)
     run_agent_only(
         repo_path,
-        vdb=vdb_instance,
+        vdb,
         processor=processor,
         user_task=user_task,
         configurable=configurable,
@@ -328,4 +328,5 @@ if __name__ == "__main__":
     repo_path = resolve_repo_path(args.repo_path)
     user_task = resolve_user_task(args.task)
 
-    run_test_system_stream(repo_path, user_task=user_task)
+    vdb = create_vector_db()
+    run_test_system_stream(repo_path, vdb, user_task=user_task)
