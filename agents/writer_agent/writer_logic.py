@@ -11,6 +11,7 @@ from graph.state import AgentState
 from shared.config import MOCK_TOOL, TEST_FRAMEWORK
 from shared.logging_rules import SHARED_LOGGING_RULES
 from utils.failure_analyzer import analyze_test_failure
+from utils.log_format import log_tail
 from utils.utils import count_test_cases_from_list, get_import_path, get_test_path
 
 logger = logging.getLogger(__name__)
@@ -85,8 +86,19 @@ def build_writer_context(state: AgentState, config: RunnableConfig) -> WriterCon
 
 def build_repair_messages(ctx: WriterContext, state: AgentState) -> tuple[SystemMessage, str]:
     last_logs = state.get("last_run_logs", "")
+    logger.debug(
+        "build_repair_messages test_file_path=%s root_package=%r import_path=%r logs_len=%s",
+        ctx.test_file_path,
+        ctx.root_package,
+        ctx.import_path,
+        len(last_logs or ""),
+    )
     targeted_fix_instruction = analyze_test_failure(
         last_logs, ctx.root_package, ctx.import_path
+    )
+    logger.debug(
+        "build_repair_messages targeted_fix_instruction preview: %s",
+        log_tail(targeted_fix_instruction, max_chars=500, max_lines=15),
     )
 
     system_prompt = REPAIR_PROMPT_TEMPLATE.format(
@@ -102,6 +114,11 @@ def build_repair_messages(ctx: WriterContext, state: AgentState) -> tuple[System
         f"Do NOT generate explanation text or conversation. You MUST IMMEDIATELY call the "
         f"`patch_test_code` tool to fix the syntax/logic error in file: {ctx.test_file_path}."
     )
+    logger.debug(
+        "build_repair_messages system_prompt_len=%s instruction_len=%s",
+        len(system_prompt),
+        len(instruction),
+    )
     return system_msg, instruction
 
 
@@ -111,7 +128,17 @@ def build_generate_messages(ctx: WriterContext, state: AgentState) -> tuple[Syst
     architecture_summary = state.get("architecture_summary", "No summary available")
     golden_test_summary = state.get("golden_test_summary", "No golden test summary available")
 
-    logger.debug("call_writer golden_example: %s", golden_test_summary)
+    logger.debug(
+        "build_generate_messages target_file=%s test_file_path=%s tc_count=%s "
+        "plan_len=%s golden_len=%s arch_len=%s",
+        ctx.target_file,
+        ctx.test_file_path,
+        tc_count,
+        len(plan_text or ""),
+        len(golden_test_summary or ""),
+        len(architecture_summary or ""),
+    )
+    logger.debug("build_generate_messages golden_test_summary preview: %s", log_tail(golden_test_summary, max_chars=400, max_lines=10))
 
     full_prompt = WRITER_PROMPT_TEMPLATE.format(
         repo_path=ctx.repo_path,
@@ -140,5 +167,10 @@ def build_generate_messages(ctx: WriterContext, state: AgentState) -> tuple[Syst
         f"4. **SMART PATCHING**: For globally imported pip libraries, patch at the root: `mocker.patch('requests.get')`.\n"
         f"5. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone Pytest functions.\n"
         f"6. **EXECUTION**: IMMEDIATELY call `write_local_file` with complete code to: {ctx.test_file_path}.\n"
+    )
+    logger.debug(
+        "build_generate_messages full_prompt_len=%s instruction_len=%s",
+        len(full_prompt) + len(f"\n\nCRITICAL: Implement ALL {tc_count} cases identified."),
+        len(instruction),
     )
     return system_msg, instruction

@@ -4,7 +4,7 @@ load_dotenv()
 
 from shared.logging_config import configure_logging
 
-configure_logging()
+configure_logging(level = "DEBUG")
 
 from langchain_core.messages import HumanMessage
 from graph.builder import build_app

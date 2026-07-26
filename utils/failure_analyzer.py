@@ -1,5 +1,7 @@
 import logging
 
+from utils.log_format import log_tail
+
 logger = logging.getLogger(__name__)
 
 FIX_PROMPT_REGISTRY = {
@@ -39,31 +41,47 @@ FIX_PROMPT_REGISTRY = {
 
 def analyze_test_failure(logs: str, root_package: str, import_path: str) -> str:
     """Utility function to parse traceback and return targeted repair instructions."""
+    logger.debug(
+        "analyze_test_failure logs_len=%s root_package=%r import_path=%r",
+        len(logs or ""),
+        root_package,
+        import_path,
+    )
+    logger.debug("analyze_test_failure logs tail:\n%s", log_tail(logs))
 
-    # 🛑 0. טיפול מוקדם בשגיאות סינטקס/הזחה שנוצרו מהפאתץ'
     if "IndentationError" in logs or "SyntaxError" in logs:
+        logger.debug("analyze_test_failure matched rule: SyntaxError_Indentation")
         return FIX_PROMPT_REGISTRY["SyntaxError_Indentation"]
-        
-    # --- 1. ModuleNotFoundError Handling ---
+
     if "ModuleNotFoundError" in logs:
         import_crash_hint = ""
-        # דיאגנוזה ממוקדת לפעולה בלבד - בלי לחזור על חוק ה-Blanket Mock הגלובלי
         if root_package and root_package in logs:
             import_crash_hint = (
                 f"\n🚨 SPECIFIC DIAGNOSIS: The ModuleNotFoundError is caused BECAUSE you blocked '{root_package}' in sys.modules!\n"
                 f"You MUST create a SEARCH/REPLACE block to DELETE any lines assigning `sys.modules['{root_package}']` or `sys.modules['{import_path}']` from the top of the file immediately!\n"
             )
+            logger.debug(
+                "analyze_test_failure ModuleNotFoundError with sys.modules hint for %r",
+                root_package,
+            )
+        else:
+            logger.debug("analyze_test_failure matched rule: ModuleNotFoundError (base)")
 
         base_instruction = FIX_PROMPT_REGISTRY["ModuleNotFoundError"]
-        return f"{base_instruction}\n{import_crash_hint}"
+        result = f"{base_instruction}\n{import_crash_hint}"
+        logger.debug(
+            "analyze_test_failure instruction_len=%s",
+            len(result),
+        )
+        return result
 
-    # --- 2. Database Rollback Failure ---
-    elif "rollback" in logs and "AssertionError" in logs:
+    if "rollback" in logs and "AssertionError" in logs:
+        logger.debug("analyze_test_failure matched rule: AssertionError_rollback")
         return FIX_PROMPT_REGISTRY["AssertionError_rollback"]
 
-    # --- 3. Print / Capsys / Stream Mismatch ---
-    elif "capsys" in logs or "readouterr" in logs or "CaptureResult" in logs:
+    if "capsys" in logs or "readouterr" in logs or "CaptureResult" in logs:
+        logger.debug("analyze_test_failure matched rule: AssertionError_capsys")
         return FIX_PROMPT_REGISTRY["AssertionError_capsys"]
 
-    # --- 4. Fallback ---
+    logger.debug("analyze_test_failure matched rule: General_Exception")
     return FIX_PROMPT_REGISTRY["General_Exception"]
