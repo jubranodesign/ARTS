@@ -1,17 +1,20 @@
+import logging
 from pathlib import Path
+
 from langgraph.graph.state import RunnableConfig
+
 from graph.state import AgentState
-from services.code_processor import CodeProcessor
 from services.document_factory import DocumentFactory
-from services.vector_db_service import VectorDBService
-from shared.config import REPO_PATH
+from utils.repo_files import resolve_repo_file
+
+logger = logging.getLogger(__name__)
 
 
 def save_test_node(state: AgentState, config: RunnableConfig):
 
-    db_service =config.get("configurable", {}).get("vdb") or VectorDBService()
-    processor = config.get("configurable", {}).get("processor") or CodeProcessor()
-
+    repo_path = config["configurable"]["repo_path"]
+    db_service = config["configurable"]["vdb"]
+    processor = config["configurable"]["processor"]
     # 1. בדיקה שהטסט באמת עבר ב-State
     if state.get("test_run_status") != "passed":
         return state
@@ -21,8 +24,8 @@ def save_test_node(state: AgentState, config: RunnableConfig):
     if not rel_path:
         return state
         
-    full_path = Path(REPO_PATH) / rel_path
-    root_path = Path(REPO_PATH)
+    full_path = Path(resolve_repo_file(repo_path, rel_path))
+    root_path = Path(repo_path)
 
     # 3. הקריאה המדויקת ל-Factory
     # שים לב: אנחנו מעבירים את הנתיבים ואת ה-Flag של ה-is_test
@@ -37,10 +40,10 @@ def save_test_node(state: AgentState, config: RunnableConfig):
     if doc:
         # כאן ה-Processor חותך את ה-Document ל-Chunks
         chunks = processor.process([doc])
-        print("save_test_node chunks: ", chunks)
+        logger.debug("save_test_node chunks: %s", chunks)
 
         # וה-DB Service שומר אותם ב-ChromaDB
         db_service.save_documents(chunks)
-        print(f"✨ Self-Feeding: Successfully indexed new test: {rel_path}")
+        logger.info("Self-Feeding: successfully indexed new test: %s", rel_path)
 
     return state

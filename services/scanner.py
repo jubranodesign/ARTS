@@ -3,7 +3,7 @@ from pathlib import Path
 
 class CodeScanner:
     def __init__(self, ignored_dirs=None, allowed_extensions=None):
-        self.ignored_dirs = ignored_dirs or {'__pycache__', '.venv', 'venv', '.git', 'tests', '.pytest_cache'}
+        self.ignored_dirs = ignored_dirs or {'__pycache__', '.venv', 'venv', '.git', 'tests', '.pytest_cache', 'seed_data'}
         self.allowed_extensions = allowed_extensions or {'.py', ".md"}
 
     def scan(self, repo_path: str):

@@ -1,5 +1,26 @@
+"""
+Message helpers for agent nodes.
+
+- ``build_agent_messages``: designer / reviewer / writer — read_local_file then execute.
+- ``prepare_chat_history``: researcher — rich system prompt + trimmed Human/AI/Tool history.
+"""
+
 from langchain_core.messages import SystemMessage, trim_messages
 from langchain_core.messages import HumanMessage, ToolMessage
+
+TRIM_TOKENS_AGENT = 10_000
+TRIM_TOKENS_RESEARCHER = 50_000
+
+
+def strip_system_messages(messages: list) -> list:
+    """Remove SystemMessage entries so a fresh system prompt can be prepended."""
+    return [m for m in messages if not isinstance(m, SystemMessage)]
+
+
+def prepare_chat_history(messages: list, llm, *, max_tokens: int) -> list:
+    """Strip old system messages, then trim remaining chat history."""
+    clean = strip_system_messages(messages)
+    return get_trimmed_messages(clean, llm, max_tokens=max_tokens)
 
 
 def get_clean_text(content):
@@ -26,7 +47,6 @@ def get_trimmed_messages(messages, llm, max_tokens=3000):
         max_tokens=max_tokens,
         strategy="last",
         token_counter=llm,
-        # include_system=True,
         allow_partial=False
     )
     return trimmer.invoke(messages)
@@ -51,59 +71,29 @@ def build_agent_messages(state, system_msg, target_file, execute_instruction, ll
             HumanMessage(content=f"Please read the file: {target_file}")
         ]
 
-    # ניקוי המערכת הישנה מההיסטוריה
-    clean_history = [m for m in messages if not isinstance(m, SystemMessage)]
-    
-    trimmed_history = get_trimmed_messages(
-        clean_history,
-        llm,
-        max_tokens=4000
+    trimmed_history = prepare_chat_history(
+        messages, llm, max_tokens=TRIM_TOKENS_AGENT
     )
     return [system_msg] + trimmed_history + [HumanMessage(content=execute_instruction)]
-
-# def build_agent_messages(state, system_msg, target_file, execute_instruction, llm):
-#     messages = state.get("messages", [])
-
-#     # 1. נחלץ את כל הודעות הכלי של קריאת קבצים שיש בהן תוכן
-#     tool_messages = [
-#         m for m in messages 
-#         if isinstance(m, ToolMessage) and m.name == "read_local_file"
-#     ]
-    
-#     # סינון נוסף לפי פונקציית הניקוי שלך
-#     clean_tool_history = [m for m in tool_messages if get_clean_text(m.content)]
-
-#     # 2. אם אין הודעות כלי תקינות, סימן שעדיין צריך לקרוא את הקובץ
-#     if not clean_tool_history:
-#         return [
-#             system_msg,
-#             HumanMessage(content=f"Please read the file: {target_file}")
-#         ]
-
-#     # 3. שלב הביצוע - לוקחים רק את ה-ToolMessages הנקיים
-#     # הערה: אם אתה רוצה רק את הקובץ האחרון שנקרא, אפשר להשתמש ב- [clean_tool_history[-1]]
-#     trimmed_history = get_trimmed_messages(
-#         clean_tool_history,
-#         llm,
-#         max_tokens=4000
-#     )
-    
-#     # מחזירים מבנה נקי: מערכת -> תוכן הקבצים -> הוראת ביצוע
-#     return [system_msg] + trimmed_history + [HumanMessage(content=execute_instruction)]
-
 
 def extract_message_by_content(messages: list, content_trigger: str, message_type: str = "ai") -> str:
     """
     סורקת את היסטוריית ההודעות מהסוף להתחלה ומחזירה את התוכן של ההודעה הראשונה
-    שמתאימה לסוג ולמחרוזת החיפוש.
+    שמתאימה לסוג, מכילה את מחרוזת החיפוש, ואינה ריקה או הודעת כלי בלבד.
     """
     for m in reversed(messages):
-        # תמיכה גם באובייקטים של LangChain וגם בדיקשנריז פשוטים
+        # תמיכה באובייקטים של LangChain ובדיקשנריז
         m_type = getattr(m, 'type', m.get('type') if isinstance(m, dict) else None)
         m_content = getattr(m, 'content', m.get('content') if isinstance(m, dict) else "")
         
+        # תמיכה במצב שבו התוכן מגיע כרשימה (קורה לפעמים ב-LangChain החדש)
+        if isinstance(m_content, list):
+            # מחברים את חלקי הטקסט אם יש כאלו
+            m_content = " ".join([block.get("text", "") for block in m_content if isinstance(block, dict) and block.get("type") == "text"])
+
+        # 🎯 בדיקה חסינה: לוודא שזה ה-type הנכון, שהטריגר קיים, ושזו לא הודעת אתחול ריקה של כלי
         if m_type == message_type and content_trigger in m_content:
-            return m_content
+            return m_content.strip()
             
     return ""
 
@@ -114,10 +104,8 @@ def get_all_processed_tool_data(messages: list, filter_func=None) -> str:
     for m in messages:
         if getattr(m, 'type', '') == 'tool':
             content = m.content
-            # print(f" get_all_processed_tool_data content: {content}")
             if filter_func:
                 content = filter_func(content)
-                # print(f" get_all_processed_tool_data content after filter: {content}")
             if content and "No reference" not in content:
                 # אנחנו מחלקים לפי הכותרת אבל שומרים אותה
                 chunks = content.split("--- RESULT")
@@ -154,8 +142,7 @@ def filter_only_successful_tests(search_results_string: str) -> str:
         # שיחזור ה-Header המלא לצורך בדיקה
         full_res = "--- RESULT" + res
         
-        # בדיקה שה-Chunk הוא גם טסט וגם עבר (Status passed)
-        if "IS_TEST: True" in full_res and "STATUS: passed" in full_res:
+        if "IS_TEST: True" in full_res:
             filtered_tests.append(full_res.strip())
 
     if not filtered_tests:

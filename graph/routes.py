@@ -1,14 +1,14 @@
 """Routing functions for the LangGraph workflow (conditional edges)."""
 
+import logging
+
 from langgraph.graph import END
 
 from graph.state import AgentState
+from shared.run_policy import get_max_test_attempts, get_risk_threshold
 
+logger = logging.getLogger(__name__)
 
-# def route_after_input(state: AgentState):
-#     if state.get("user_input"):
-#         return "researcher"
-#     return END
 
 def route_after_input(state: AgentState):
     user_input = state.get("user_input")
@@ -18,13 +18,20 @@ def route_after_input(state: AgentState):
     if not user_input or not user_input.strip():
         return END
 
-    # כאן נכנס המודל שלך לפעולה (אחרי שיש בקשה מהיוזר):
-    if risk_score >= 0.2:
-        print(f"--- Risk high ({risk_score:.2f}). Forwarding to researcher. ---")
+    threshold = get_risk_threshold()
+    if risk_score >= threshold:
+        logger.info(
+            "Risk high (%.2f >= %.2f). Forwarding to researcher.",
+            risk_score,
+            threshold,
+        )
         return "researcher"
-    
-    # אם היוזר ביקש אבל המודל אומר שהקוד בטוח (מתחת ל-0.2)
-    print(f"--- Risk low ({risk_score:.2f}). Skipping deep research. ---")
+
+    logger.info(
+        "Risk low (%.2f < %.2f). Ending workflow (no researcher/writer path).",
+        risk_score,
+        threshold,
+    )
     return END # או שאתה יכול להחליט לשלוח למסלול 'קל' יותר
 
 
@@ -38,34 +45,34 @@ def should_continue(state: AgentState):
 
 def route_after_cleaner(state: AgentState):
     if state.get("review_completed"):
-        print("🔄 Cleaner -> Routing to WRITER")
+        logger.info("Cleaner -> routing to WRITER")
         return "to_writer"
-    print("🔄 Cleaner -> Routing to REVIEWER")
+    logger.info("Cleaner -> routing to REVIEWER")
     return "to_reviewer"
 
-
-# def should_continue_after_test(state: AgentState):
-#     if state["test_run_status"] == "passed":
-#         print("should_continue_after_test. passed")
-#         return "finish"
-#     print("should_continue_after_test. fix_code")
-#     return "fix_code"
 
 def should_continue_after_test(state: AgentState):
     # 1. אם הטסט עבר - מסיימים בהצלחה
     if state.get("test_run_status") == "passed":
-        print("✅ should_continue_after_test: PASSED. Finishing workflow.")
+        logger.info("should_continue_after_test: PASSED. Finishing workflow.")
         return "finish"
     
     # 2. בדיקה כמה ניסיונות בוצעו עד כה
     # (מוודאים שהערך קיים, אם לא - מתייחסים כ-0)
     attempts = state.get("attempts", 0)
-    max_attempts = 3 # ניתן לשנות לפי הצורך
-    
+    max_attempts = get_max_test_attempts()
+
     if attempts >= max_attempts:
-        print(f"❌ should_continue_after_test: FAILED after {attempts} attempts. Stopping to prevent infinite loop.")
+        logger.error(
+            "should_continue_after_test: FAILED after %s attempts. Stopping to prevent infinite loop.",
+            attempts,
+        )
         return "finish" # או return "give_up" אם יש לך node כזה
     
     # 3. אם נכשל ויש עוד ניסיונות - ממשיכים לתיקון
-    print(f"🔄 should_continue_after_test: FAILED. Attempt {attempts}/{max_attempts}. Routing to FIX_CODE.")
+    logger.info(
+        "should_continue_after_test: FAILED. Attempt %s/%s. Routing to FIX_CODE.",
+        attempts,
+        max_attempts,
+    )
     return "fix_code"

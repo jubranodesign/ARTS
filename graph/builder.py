@@ -1,4 +1,4 @@
-import atexit
+import os
 import sqlite3
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
@@ -6,7 +6,6 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from agents.designer_agent.call_reviewer import call_reviewer
 from agents.designer_agent.final_cleaner_designer import final_cleaner_designer
-from agents.designer_agent.update_investigated_files import update_investigated_files
 from agents.designer_agent.call_designer import call_designer
 from agents.executor_agent.save_test_node import save_test_node
 from agents.executor_agent.call_executor import call_executor
@@ -25,7 +24,6 @@ from graph.routes import (
     should_continue,
     should_continue_after_test,
 )
-
 workflow = StateGraph(AgentState)
 
 workflow.add_node("wait_for_task", wait_for_task)
@@ -34,7 +32,6 @@ workflow.add_node("researcher_tools", ToolNode(RESEARCHER_TOOLS))
 workflow.add_node("summarizer", summarize_architecture)
 workflow.add_node("designer", call_designer)
 workflow.add_node("designer_tools", ToolNode(AGENT_TOOLS))
-workflow.add_node("update_investigated_files", update_investigated_files)
 workflow.add_node("reviewer", call_reviewer)
 workflow.add_node("reviewer_tools", ToolNode(AGENT_TOOLS))
 workflow.add_node("final_cleaner_designer", final_cleaner_designer)
@@ -67,8 +64,7 @@ workflow.add_conditional_edges(
 workflow.add_edge("researcher_tools", "researcher")
 
 workflow.add_edge("summarizer", "designer")
-workflow.add_edge("designer_tools", "update_investigated_files")
-workflow.add_edge("update_investigated_files", "designer")
+workflow.add_edge("designer_tools", "designer")
 
 workflow.add_conditional_edges(
     "designer",
@@ -122,16 +118,34 @@ workflow.add_conditional_edges(
 
 workflow.add_edge("save_successful_test", END)
 
-conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
+_app_instance = None
+_app_conn = None
 
 
-def cleanup():
-    conn.close()
-    print("Cleanup: SQLite connection closed.")
+def build_app(checkpoint_path: str | None = None):
+    """
+    Compile the graph with a SQLite checkpointer.
+    Returns (app, conn). Caller should conn.close() when done (or use a cached singleton via build_app() with no args).
+    """
+    global _app_instance, _app_conn
+
+    path = checkpoint_path or os.environ.get("CHECKPOINT_DB", "checkpoints.sqlite")
+    if _app_instance is not None and checkpoint_path is None:
+        return _app_instance, _app_conn
+
+    if _app_conn is not None:
+        _app_conn.close()
+
+    conn = sqlite3.connect(path, check_same_thread=False)
+    memory = SqliteSaver(conn)
+    compiled = workflow.compile(checkpointer=memory, interrupt_before=["wait_for_task"])
+    _app_instance = compiled
+    _app_conn = conn
+    return compiled, conn
 
 
-atexit.register(cleanup)
-
-memory = SqliteSaver(conn)
-app = workflow.compile(checkpointer=memory, interrupt_before=["wait_for_task"])
-# app = workflow.compile(interrupt_before=["wait_for_task"])
+def __getattr__(name: str):
+    """Lazy `app` for LangGraph CLI (`langgraph.json` → graph.builder:app)."""
+    if name == "app":
+        return build_app()[0]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

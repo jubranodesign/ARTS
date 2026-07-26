@@ -1,18 +1,23 @@
 """Barrel re-exports for backward compatibility (`from utils.utils import ...`)."""
 
 from utils.messages import (
+    TRIM_TOKENS_AGENT,
+    TRIM_TOKENS_RESEARCHER,
     build_agent_messages,
     get_clean_text,
     get_trimmed_messages,
+    prepare_chat_history,
+    strip_system_messages,
     filter_only_successful_tests,
     get_all_processed_tool_data,
     extract_message_by_content
 )
-from utils.paths import (
+from shared.paths import (
     extract_python_path,
     get_import_path,
     get_safe_full_path,
     get_test_path,
+    normalize_relative_path,
 )
 from utils.state import count_test_cases_from_list, parse_architecture_summary
 from utils.testing import run_pytest
@@ -25,10 +30,15 @@ __all__ = [
     "get_import_path",
     "get_safe_full_path",
     "get_test_path",
+    "normalize_relative_path",
     "get_trimmed_messages",
     "run_pytest",
     "filter_only_successful_tests",
     "get_all_processed_tool_data",
     "extract_message_by_content",
-    "parse_architecture_summary"
+    "parse_architecture_summary",
+    "prepare_chat_history",
+    "strip_system_messages",
+    "TRIM_TOKENS_AGENT",
+    "TRIM_TOKENS_RESEARCHER",
 ]

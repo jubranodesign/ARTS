@@ -1,17 +1,42 @@
-import os
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
-from graph.builder import app
+
+load_dotenv()
+
+from shared.logging_config import configure_logging
+
+configure_logging()
+
+from langchain_core.messages import HumanMessage
+from graph.builder import build_app
 from services.code_processor import CodeProcessor
 from services.vector_db_service import VectorDBService # הייבוא של הגרף המקומפל מה-Builder
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from shared.constants import resolve_user_task
+from shared.graph_config import build_langgraph_run_config
 from utils.utils import get_clean_text
 
-# טעינת משתני סביבה (API Keys)
-load_dotenv()
+# טעינת משתני סביבה (API Keys) — load_dotenv() runs at top of this module
+
+
+def create_vector_db() -> VectorDBService:
+    """Construct VDB at entry points (CLI, run_local); do not use inside graph runners."""
+    return VectorDBService()
+
+
+def build_graph_run_config(
+    repo_path: str,
+    vdb: VectorDBService,
+    processor: CodeProcessor,
+    *,
+    configurable: dict | None = None,
+) -> dict:
+    """Backward-compatible alias; see shared.graph_config."""
+    return build_langgraph_run_config(
+        repo_path, vdb, processor, overrides=configurable
+    )
 
 
 def print_summary_evolution(app, thread_id):
@@ -58,8 +83,8 @@ def print_current_db_state(app, thread_id):
      print(f"📂 test_chunks ({len(test_chunks)}): {test_chunks}")
 
      # הדפסת רשימת הקבצים שנחקרו
-     files = state.values.get("investigated_files", [])
-     print(f"📂 Investigated Files ({len(files)}): {files}")
+     target_file_code = state.values.get("target_file_code", [])
+     print(f"📂 target_file_code  ({len(target_file_code)}): {target_file_code}")
 
      # הדפסת רשימת הקבצים שנחקרו
      test_plan = state.values.get("test_plan", [])
@@ -76,102 +101,53 @@ def print_current_db_state(app, thread_id):
      print(f"\n📝 Architecture Summary:\n{summary}")
      print("="*50 + "\n")
 
-# def run_test_system_stream():
-#     vdb_instance = VectorDBService()
-#     thread_id = "test_invoke_session_001"
-#     config = {"vdb": vdb_instance, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
-   
-#     print(f"🚀 Starting Test Agent System (Thread: {thread_id})")
-#     print("-" * 50)
 
-#     # 2. הרצה ראשונית
-#     app.invoke({"messages": []}, config=config)
-
-#     # 3. המשימה
-#     user_task = "Write unit tests for the file scraper_service/scraper_api.py"
-#     app.update_state(config, {"user_input": user_task, "messages": [HumanMessage(content=user_task)]}, as_node="wait_for_task")
-
-#     print(f"\n🔍 Analyzing project for task: '{user_task}'...")
-
-#     # 4. Streaming - הדפסה לכל Node
-#     for event in app.stream(None, config, stream_mode="updates"):
-#         for node_name, output in event.items():
-#             print(f"\n[NODE: {node_name.upper()}]")
-            
-#             if node_name == "researcher":
-#                 print(f"📡 Researcher is looking for clues in Vector DB...")
-            
-#             elif node_name == "summarizer":
-#                 summary_val = output.get('architecture_summary', "No summary provided")
-#                 print(f"📝 Summary updated. Confidence: {str(summary_val)}...")
-            
-#             elif node_name == "designer":
-#                 if "messages" in output:
-#                     last_msg = output["messages"][-1]
-#                     # הדפסת התוכן של הדיזיינר (הטיוטה)
-#                     if last_msg.content:
-#                         print(f"🎨 Designer Content:\n{last_msg.content}")
-#                     # הדפסת הכלים שלו
-#                     if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-#                         print(f"🛠️ Designer is calling tools: {[t['name'] for t in last_msg.tool_calls]}")
-
-#             elif node_name == "reviewer":
-#                 if "messages" in output:
-#                     last_msg = output["messages"][-1]
-#                     # הדפסת התוכן של הריביוור (התיקונים/התוכנית הסופית)
-#                     if last_msg.content:
-#                         print(f"🛡️ Reviewer Content:\n{last_msg.content}")
-#                     # הדפסת הכלים שלו
-#                     if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-#                         print(f"🛠️ Reviewer is calling tools: {[t['name'] for t in last_msg.tool_calls]}")
-
-#             elif node_name == "update_investigated_files":
-#                 print(f"📂 Files investigated so far: {output.get('investigated_files')}")
-
-#     console = Console()
-#     # 5. הצגת התוצאה הסופית
-#     final_state = app.get_state(config)
-#     final_messages = final_state.values.get("messages", [])
-    
-#     if final_messages:
-#         # חילוץ תוכן מהודעת ה-AI האחרונה שיש בה טקסט (למקרה שהאחרונה היא קריאת כלי ריקה)
-#         target_content = ""
-#         for msg in reversed(final_messages):
-#             if isinstance(msg, AIMessage) and msg.content:
-#                 target_content = msg.content
-#                 break
-        
-#         if target_content:
-#             full_text = "".join([item.get("text", "") for item in target_content if item.get("type") == "text"]) if isinstance(target_content, list) else target_content
-#             console.print("\n")
-#             console.print(Panel("✅ [bold green]FINAL TEST PLAN GENERATED[/bold green]", expand=False))
-#             console.print(Markdown(full_text))
-#             console.print("="*50)
-
-
-def run_test_system_stream():
+def run_test_system_stream(
+    repo_path: str,
+    vdb: VectorDBService,
+    processor: CodeProcessor | None = None,
+    user_task: str | None = None,
+    configurable: dict | None = None,
+):
     console = Console()
+    app, conn = build_app()
+    try:
+        return _run_test_system_stream_impl(
+            console,
+            app,
+            repo_path,
+            vdb=vdb,
+            processor=processor,
+            user_task=user_task,
+            configurable=configurable,
+        )
+    finally:
+        conn.close()
+        print("Cleanup: SQLite connection closed.")
 
-    vdb_instance = VectorDBService()
-    processor = CodeProcessor()
-    thread_id = "test_invoke_session_001"
-    config = {
-       "vdb": vdb_instance,
-      "processor": processor,
-      "configurable": 
-              {
-                "thread_id": thread_id, 
-                 "model_provider": "mistral", 
-                 "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories."
-              }
-           }
+
+def _run_test_system_stream_impl(
+    console,
+    app,
+    repo_path: str,
+    vdb: VectorDBService,
+    processor: CodeProcessor | None = None,
+    user_task: str | None = None,
+    configurable: dict | None = None,
+):
+    proc = processor or CodeProcessor()
+    config = build_graph_run_config(
+        repo_path,
+        vdb,
+        proc,
+        configurable=configurable,
+    )
+    thread_id = config["configurable"]["thread_id"]
 
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)
 
-    # 1. המשימה
-    user_task = "Write unit tests for the file scraper_service/scraper_api.py"
-    # user_task = "Analyze the database commit logic in the scraper."
+    user_task = resolve_user_task(user_task)
 
     # עדכון ה-State הראשוני
     app.update_state(config, {
@@ -180,7 +156,6 @@ def run_test_system_stream():
         # אנחנו מאתחלים את הסטטוס ל-pending כדי שה-Writer ידע שזה סבב ראשון
         "test_run_status": "pending"
     },
-    #  as_node="wait_for_task"
      )
 
     console.print(f"🔍 [bold yellow]Analyzing project for task:[/bold yellow] '{user_task}'...\n")
@@ -239,10 +214,6 @@ def run_test_system_stream():
                     if safe_content:
                         console.print(Panel(Markdown(safe_content), title="💻 Generated Python Code", border_style="blue"))
 
-            # --- UPDATE_INVESTIGATED_FILES ---
-            elif node_name == "update_investigated_files":
-                console.print(f"📂 Investigated so far: {output.get('investigated_files')}")
-
              # --- EXECUTOR (סוכן הריצה) ---
             elif node_name == "executor":
                 status = output.get("test_run_status", "unknown")
@@ -257,17 +228,7 @@ def run_test_system_stream():
                     short_logs = "\n".join(logs.splitlines()[-15:]) 
                     console.print(Panel(short_logs, title="⚠️ Failure Logs (Last 15 lines)", border_style="red"))   
 
-    # 3. סיום
-    # console.print("\n")
-    # console.print(Panel(
-    #     f"✅ [bold green]WORKFLOW COMPLETE[/bold green]\n"
-    #     f"The tests have been generated and saved.\n"
-    #     f"You can now run [bold]pytest tests/[/bold] to verify.",
-    #     expand=False, 
-    #     border_style="bold green"
-    # ))
     # 3. סיום - מחוץ ללולאת ה-stream
-    # נשלוף את ה-state הסופי כדי לדעת מה קרה
     final_state = app.get_state(config).values
     final_status = final_state.get("test_run_status", "unknown")
 
@@ -290,68 +251,86 @@ def run_test_system_stream():
         ))
 
 
-def run_test_system():
-    # 1. הגדרות בסיס
-    vdb_instance = VectorDBService()
-    thread_id = "test_invoke_session_001"
-    config = {"vdb": vdb_instance, "configurable": {"thread_id": thread_id, "model_provider": "groq"}}
-    user_task = "Write a comprehensive test for the scraper service, focusing on data validation."
+def run_ingest_only(
+    repo_path: str,
+    ingest: str,
+    vdb: VectorDBService,
+) -> None:
+    """Ingest seed/source/both into Chroma (+ BM25 on source). No graph run."""
+    from ingest import IngestMode, run_both_ingestion, run_ingestion_for_repo
 
-    print(f"🚀 Starting Test Agent System (STRICT INVOKE MODE)")
-    print(f"Target Task: {user_task}")
-    print("-" * 50)
+    if ingest == "both":
+        run_both_ingestion(vdb, repo_root=repo_path)
+    elif ingest == "seed":
+        run_ingestion_for_repo(vdb, IngestMode.SEED, repo_root=repo_path)
+    elif ingest == "source":
+        run_ingestion_for_repo(vdb, IngestMode.SOURCE, repo_root=repo_path)
+    else:
+        raise ValueError(f"Unknown ingest mode: {ingest!r}")
 
-    try:
-        # 2. הרצה ראשונית עד ה-Interrupt (wait_for_task)
-        # אנחנו שולחים הודעה ריקה רק כדי להביא את הגרף לנקודת העצירה
-        app.invoke({"messages": []}, config=config)
 
-        # 3. הזרקת המשימה לתוך ה-State
-        # חשוב: אנחנו מזריקים גם את האובייקט HumanMessage וגם את הסטרינג user_input
-        print("📥 Injecting task and human message into state...")
-        app.update_state(
-            config, 
-            {
-                "user_input": user_task, 
-                "messages": [HumanMessage(content=user_task)]
-            }, 
-            as_node="wait_for_task"
-        )
+def run_agent_only(
+    repo_path: str,
+    vdb: VectorDBService,
+    *,
+    processor: CodeProcessor | None = None,
+    user_task: str | None = None,
+    configurable: dict | None = None,
+) -> None:
+    """Run the LangGraph agent (streaming) only."""
+    run_test_system_stream(
+        repo_path,
+        vdb,
+        processor=processor,
+        user_task=user_task,
+        configurable=configurable,
+    )
 
-        # 4. הרצה מהעצירה ועד הסוף
-        # שליחת None אומרת לגרף: "תמשיך מהמקום שבו עצרת ב-thread_id הזה"
-        print("⏳ Running agents (Researcher -> Summarizer -> Designer)...")
-        final_result = app.invoke(None, config=config)
 
-        # 5. הצגת התוצאה
-        messages = final_result.get("messages", [])
-        if messages:
-            last_msg = messages[-1]
-            print("\n" + "="*50)
-            print("✅ FINAL DESIGNER OUTPUT:")
-            print("="*50)
-            print(last_msg.content)
-            print("="*50)
-        else:
-            print("⚠️ System finished but no messages were found in state.")
+def run_pipeline(
+    repo_path: str,
+    vdb: VectorDBService,
+    *,
+    ingest: str | None = None,
+    processor: CodeProcessor | None = None,
+    user_task: str | None = None,
+    configurable: dict | None = None,
+) -> None:
+    """
+    Optional ingest then agent run. No CLI — for run_local.py and notebooks.
 
-    except Exception as e:
-        print(f"\n❌ CRITICAL ERROR during invoke: {e}")
-        # אם יש שגיאה, ננסה לשלוף את המצב האחרון לדיבאג
-        current_state = app.get_state(config)
-        print(f"Last Node Reached: {current_state.next}")
+    ingest: None | \"both\" | \"seed\" | \"source\" (None = agent only)
+    """
+    if ingest is not None:
+        run_ingest_only(repo_path, ingest, vdb)
+    run_agent_only(
+        repo_path,
+        vdb,
+        processor=processor,
+        user_task=user_task,
+        configurable=configurable,
+    )
 
 
 if __name__ == "__main__":
-    #  run_test_system()
-    run_test_system_stream()
+    import argparse
 
-    #  config = {"configurable": {"thread_id": "test_invoke_session_001"}}
-    #  messages = app.get_state(config).values["messages"]
-    #  app.update_state(config, {
-    #  "test_chunks": "",
-    #  "messages": [RemoveMessage(id=m.id) for m in messages]
-    # # "investigated_files": {"scraper_service/scraper_api.py"} 
-    #  })
-    #  print_current_db_state(app,"test_invoke_session_003")
-    # print_summary_evolution(app,"test_invoke_session_001")
+    from shared.repo_cli import add_repo_path_argument, resolve_repo_path
+
+    parser = argparse.ArgumentParser(description="Run the agentic test system.")
+    add_repo_path_argument(parser)
+    parser.add_argument(
+        "--task",
+        default=None,
+        help="Agent task prompt (default: USER_TASK env or built-in analysis_service request).",
+    )
+    args = parser.parse_args()
+    repo_path = resolve_repo_path(args.repo_path)
+    user_task = resolve_user_task(args.task)
+
+    from shared.startup_checks import validate_runtime_startup
+
+    validate_runtime_startup(repo_path)
+
+    vdb = create_vector_db()
+    run_test_system_stream(repo_path, vdb, user_task=user_task)

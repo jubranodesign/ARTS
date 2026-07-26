@@ -1,8 +1,11 @@
 
+import logging
 import re
 from langgraph.graph.message import RemoveMessage
 from graph.state import AgentState
 from utils.utils import get_clean_text
+
+logger = logging.getLogger(__name__)
 
 def final_cleaner_designer(state: AgentState):
     all_messages = state.get("messages", [])
@@ -22,7 +25,7 @@ def final_cleaner_designer(state: AgentState):
     # 3. מחיקת היסטוריית ההודעות (מנקים את ה-Context)
     delete_messages = [RemoveMessage(id=m.id) for m in all_messages if m.id]
 
-    print(f"🧹 Cleaner: Saved content to test_plan. Messages cleared.")
+    logger.info("Cleaner: saved content to test_plan; messages cleared")
 
     return {
         "test_plan": final_plan,

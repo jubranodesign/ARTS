@@ -1,4 +1,8 @@
+import logging
+
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 # פונקציות העזר מחוץ לפונקציה המרכזית
 def recall_at_k(keyword, docs, k=5):
@@ -21,10 +25,7 @@ def evaluate_retrieval(test_set, vstore):
     rows = []
     
     for query_t, kw in test_set:
-        print(f"\n{'='*60}")
-        print(f"🔍 QUERY: {query_t}")
-        print(f"🎯 TARGET KEYWORD: '{kw}'")
-        print(f"{'='*60}")
+        logger.debug("QUERY: %s | TARGET KEYWORD: %r", query_t, kw)
 
         # שליפה סמנטית עם ציונים
         results = vstore.db.similarity_search_with_score(query_t, k=10)
@@ -33,14 +34,16 @@ def evaluate_retrieval(test_set, vstore):
         # הדפסת המסמכים שנשלפו לאבחון
         for i, (doc, score) in enumerate(results, 1):
             is_match = kw.lower() in doc.page_content.lower()
-            match_marker = "✅ [MATCH]" if is_match else "❌ [NO MATCH]"
-            
-            print(f"\nRank {i} | Score: {score:.4f} | {match_marker}")
-            print(f"Source: {doc.metadata.get('relative_path', 'Unknown').split('/')[-1]}")
-            # מדפיסים רק את 200 התווים הראשונים כדי לא להציף את הטרמינל
+            match_marker = "MATCH" if is_match else "NO MATCH"
             content_snippet = doc.page_content.replace('\n', ' ')[:200]
-            print(f"Content: {content_snippet}...")
-            print(f"{'-'*30}")
+            logger.debug(
+                "Rank %s | Score: %.4f | %s | Source: %s | Content: %s...",
+                i,
+                score,
+                match_marker,
+                doc.metadata.get('relative_path', 'Unknown').split('/')[-1],
+                content_snippet,
+            )
 
         # מציאת הקובץ הראשון שבו נמצאה מילת המפתח
         source_found = "Not Found"
@@ -59,9 +62,7 @@ def evaluate_retrieval(test_set, vstore):
     
     # הדפסת הטבלה המסכמת בסוף
     df = pd.DataFrame(rows).set_index("Query")
-    print(f"\n\n{'#'*20} SUMMARY TABLE {'#'*20}")
-    print(df.to_string())
-    print(f"\n{'Averages':-<50}")
-    print(df.mean(numeric_only=True).to_string())
+    logger.info("Retrieval evaluation summary:\n%s", df.to_string())
+    logger.info("Averages:\n%s", df.mean(numeric_only=True).to_string())
     
     return df

@@ -1,6 +1,9 @@
+import logging
 import os
 from pathlib import Path
 from langchain_core.documents import Document
+
+logger = logging.getLogger(__name__)
 
 class DocumentFactory:
     """
@@ -38,7 +41,7 @@ class DocumentFactory:
             return Document(page_content=content, metadata=metadata)
             
         except Exception as e:
-            print(f"❌ DocumentFactory Error reading {full_path}: {e}")
+            logger.error("DocumentFactory error reading %s: %s", full_path, e)
             return None
 
     @staticmethod

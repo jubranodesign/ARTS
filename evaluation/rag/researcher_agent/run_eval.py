@@ -1,26 +1,49 @@
-# import json
-# from evaluation.rag.eval_utils import run_evaluation_suite
-# from your_project.agents import researcher_agent # הסוכן שלך
+"""Run offline RAG (Ragas) evaluation on the bundled researcher sample."""
 
-# # 1. טעינת ה-Dataset
-# with open("evaluation/rag/researcher_agent/dataset.json", "r") as f:
-#     golden_set = json.load(f)
+from __future__ import annotations
 
-# # 2. הרצת הסוכן על השאלות כדי לאסוף תוצאות (לפני האבחון)
-# results_to_evaluate = []
-# for item in golden_set:
-#     # כאן אתה מריץ את ה-Graph/Agent שלך
-#     final_state = researcher_agent.invoke({"user_input": item["question"]})
-    
-#     results_to_evaluate.append({
-#         "question": item["question"],
-#         "final_dump": final_state["messages"][-1].content,
-#         "message_history": final_state["messages"][:-1],
-#         "ground_truth": item["ground_truth"]
-#     })
+import logging
 
-# # 3. הפעלת ה-Suite הכללית שבנית
-# report = run_evaluation_suite(results_to_evaluate)
+from langchain_core.messages import ToolMessage
 
-# # 4. הדפסת הממוצעים
-# print(report)
+logger = logging.getLogger(__name__)
+
+
+def _sample_to_eval_item(sample: dict) -> dict:
+    """Map datasets.sample to run_evaluation_suite item (tool outputs as context)."""
+    contexts = sample.get("contexts") or []
+    history = [
+        ToolMessage(
+            content=str(ctx),
+            tool_call_id=f"eval-ctx-{i}",
+            name="search_source_code_semantic",
+        )
+        for i, ctx in enumerate(contexts)
+    ]
+    return {
+        "question": sample["question"],
+        "final_dump": sample["answer"],
+        "message_history": history,
+        "ground_truth": sample["ground_truth"],
+    }
+
+
+def run_rag_offline_eval() -> list:
+    """
+    Evaluate the researcher RAG sample in evaluation/rag/researcher_agent/datasets.py.
+    Requires: pip install -e \".[eval]\" (ragas).
+    """
+    try:
+        from evaluation.rag.eval_utils import run_evaluation_suite
+    except ImportError as exc:
+        raise RuntimeError(
+            "RAG evaluation requires optional deps. Install with: pip install -e \".[eval]\""
+        ) from exc
+
+    from evaluation.rag.researcher_agent.datasets import sample
+
+    item = _sample_to_eval_item(sample)
+    results = run_evaluation_suite([item])
+    for row in results:
+        logger.info("RAG scores for %r: %s", row["question"], row["scores"])
+    return results
