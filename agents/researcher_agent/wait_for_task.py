@@ -6,7 +6,7 @@ from graph.state import AgentState
 from ml_predictor.utils import predict_risk
 from shared.run_policy import get_risk_threshold
 from utils.log_format import log_tail
-from utils.paths import extract_python_path
+from shared.paths import extract_python_path
 from utils.repo_files import read_repo_text
 
 logger = logging.getLogger(__name__)

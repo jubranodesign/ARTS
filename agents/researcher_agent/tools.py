@@ -8,7 +8,7 @@ from langchain_core.tools import tool
 
 from graph.state import AgentState
 from shared.config import DATA_DIR
-from utils.paths import normalize_relative_path
+from shared.paths import normalize_relative_path
 
 logger = logging.getLogger(__name__)
 

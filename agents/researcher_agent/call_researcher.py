@@ -5,7 +5,7 @@ from agents.researcher_agent.prompts import RESEARCHER_SYSTEM_PROMPT
 from agents.researcher_agent.tools import RESEARCHER_TOOLS
 from graph.state import AgentState
 from shared.config import setup_node_llm
-from utils.paths import extract_python_path
+from shared.paths import extract_python_path
 from utils.repo_files import read_repo_text_tool_response
 from utils.state import format_risk_context
 from utils.utils import get_trimmed_messages

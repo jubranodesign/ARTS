@@ -2,7 +2,7 @@ import os
 
 from langchain_core.runnables import RunnableConfig
 
-from utils.paths import get_safe_full_path
+from shared.paths import get_safe_full_path
 
 
 def repo_path_from_config(config: RunnableConfig) -> str:

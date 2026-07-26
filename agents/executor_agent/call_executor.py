@@ -4,7 +4,7 @@ import os
 from langgraph.graph.state import RunnableConfig
 
 from graph.state import AgentState
-from utils.paths import get_safe_full_path
+from shared.paths import get_safe_full_path
 from utils.testing import run_pytest
 
 logger = logging.getLogger(__name__)

@@ -8,7 +8,7 @@ from utils.messages import (
     get_all_processed_tool_data,
     extract_message_by_content
 )
-from utils.paths import (
+from shared.paths import (
     extract_python_path,
     get_import_path,
     get_safe_full_path,
