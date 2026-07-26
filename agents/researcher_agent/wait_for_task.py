@@ -4,6 +4,7 @@ from langgraph.graph.state import RunnableConfig
 
 from graph.state import AgentState
 from ml_predictor.utils import predict_risk
+from shared.run_policy import get_risk_threshold
 from utils.log_format import log_tail
 from utils.paths import extract_python_path
 from utils.repo_files import read_repo_text
@@ -41,10 +42,12 @@ def wait_for_task(state: AgentState, config: RunnableConfig):
             }
         )
 
+    threshold = get_risk_threshold()
     logger.info(
-        "wait_for_task risk_score=%.4f target_file=%r (threshold 0.2 for researcher)",
+        "wait_for_task risk_score=%.4f target_file=%r (RISK_THRESHOLD=%.2f)",
         float(risk),
         target_file,
+        threshold,
     )
     logger.debug("wait_for_task top_reasons=%s", reasons_for_state)
 

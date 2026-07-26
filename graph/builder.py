@@ -24,8 +24,6 @@ from graph.routes import (
     should_continue,
     should_continue_after_test,
 )
-from shared.logging_config import configure_logging
-
 workflow = StateGraph(AgentState)
 
 workflow.add_node("wait_for_task", wait_for_task)
@@ -130,8 +128,6 @@ def build_app(checkpoint_path: str | None = None):
     Returns (app, conn). Caller should conn.close() when done (or use a cached singleton via build_app() with no args).
     """
     global _app_instance, _app_conn
-
-    configure_logging()
 
     path = checkpoint_path or os.environ.get("CHECKPOINT_DB", "checkpoints.sqlite")
     if _app_instance is not None and checkpoint_path is None:

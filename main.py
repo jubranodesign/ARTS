@@ -4,7 +4,7 @@ load_dotenv()
 
 from shared.logging_config import configure_logging
 
-configure_logging(level = "DEBUG")
+configure_logging()
 
 from langchain_core.messages import HumanMessage
 from graph.builder import build_app
@@ -15,13 +15,14 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from shared.constants import resolve_user_task
+from shared.run_policy import get_default_model_provider
 from utils.utils import get_clean_text
 
 # טעינת משתני סביבה (API Keys) — load_dotenv() runs at top of this module
 
 _RUN_CONFIG_DEFAULTS: dict = {
     "thread_id": "test_session_001",
-    "model_provider": "mistral",
+    "model_provider": get_default_model_provider(),
     "ground_truth": (
         "The scraper service orchestrates data pull via fetch_studies and persists it "
         "using a session context manager with a single commit after the loop. Key "

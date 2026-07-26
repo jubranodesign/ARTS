@@ -5,6 +5,7 @@ import logging
 from langgraph.graph import END
 
 from graph.state import AgentState
+from shared.run_policy import get_max_test_attempts, get_risk_threshold
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +18,20 @@ def route_after_input(state: AgentState):
     if not user_input or not user_input.strip():
         return END
 
-    # כאן נכנס המודל שלך לפעולה (אחרי שיש בקשה מהיוזר):
-    if risk_score >= 0.2:
-        logger.info("Risk high (%.2f). Forwarding to researcher.", risk_score)
+    threshold = get_risk_threshold()
+    if risk_score >= threshold:
+        logger.info(
+            "Risk high (%.2f >= %.2f). Forwarding to researcher.",
+            risk_score,
+            threshold,
+        )
         return "researcher"
-    
-    # אם היוזר ביקש אבל המודל אומר שהקוד בטוח (מתחת ל-0.2)
-    logger.info("Risk low (%.2f). Skipping deep research.", risk_score)
+
+    logger.info(
+        "Risk low (%.2f < %.2f). Ending workflow (no researcher/writer path).",
+        risk_score,
+        threshold,
+    )
     return END # או שאתה יכול להחליט לשלוח למסלול 'קל' יותר
 
 
@@ -52,8 +60,8 @@ def should_continue_after_test(state: AgentState):
     # 2. בדיקה כמה ניסיונות בוצעו עד כה
     # (מוודאים שהערך קיים, אם לא - מתייחסים כ-0)
     attempts = state.get("attempts", 0)
-    max_attempts = 3 # ניתן לשנות לפי הצורך
-    
+    max_attempts = get_max_test_attempts()
+
     if attempts >= max_attempts:
         logger.error(
             "should_continue_after_test: FAILED after %s attempts. Stopping to prevent infinite loop.",

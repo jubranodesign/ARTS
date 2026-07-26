@@ -12,6 +12,11 @@ from shared.embeddings import (
 )
 from shared.llm_factory import get_model
 from shared.node_llm import setup_node_llm
+from shared.run_policy import (
+    get_default_model_provider,
+    get_max_test_attempts,
+    get_risk_threshold,
+)
 from shared.paths import (
     BASE_DIR,
     DATA_DIR,
@@ -34,4 +39,7 @@ __all__ = [
     "get_repo_path",
     "get_repo_seed_path",
     "setup_node_llm",
+    "get_default_model_provider",
+    "get_risk_threshold",
+    "get_max_test_attempts",
 ]

@@ -7,7 +7,11 @@ from langchain_ollama import ChatOllama
 from langchain_openai.chat_models.base import ChatOpenAI
 
 
-def get_model(provider: str = "groq", temperature: float = 0):
+def get_model(provider: str | None = None, temperature: float = 0):
+    if provider is None:
+        from shared.run_policy import get_default_model_provider
+
+        provider = get_default_model_provider()
     """Factory function להחזרת מודל LLM לפי ספק."""
     if provider == "groq":
         return ChatGroq(
