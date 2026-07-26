@@ -13,7 +13,7 @@ from shared.logging_config import configure_logging
 configure_logging()
 
 # --- edit for each run ---
-RUN = "agent"  # "ingest" | "agent" | "both"
+RUN = "ingest"  # "ingest" | "agent" | "both"
 INGEST_MODE = "both"  # "both" | "seed" | "source" — used when RUN is "ingest" or "both"
 REPO_PATH = None  # None → REPO_PATH from .env via get_repo_path()
 USER_TASK = None  # None → USER_TASK env or DEFAULT_USER_TASK in shared/constants.py

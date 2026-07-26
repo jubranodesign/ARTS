@@ -4,7 +4,8 @@ from datasets import Dataset
 from ragas import evaluate
 from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
 
-from shared.config import get_embeddings_model, get_model
+from shared.embeddings import get_embeddings_model
+from shared.llm_factory import get_model
 
 logger = logging.getLogger(__name__)
 

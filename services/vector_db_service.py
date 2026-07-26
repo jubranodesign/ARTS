@@ -2,7 +2,8 @@ import logging
 
 from langchain_chroma import Chroma
 
-from shared.config import VECTOR_STORE_PATH, get_embeddings_model
+from shared.embeddings import get_embeddings_model
+from shared.paths import VECTOR_STORE_PATH
 
 logger = logging.getLogger(__name__)
 

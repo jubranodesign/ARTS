@@ -1,4 +1,4 @@
-from shared.config import get_model  # או כל פרוויידר אחר שאתה עובד איתו
+from shared.llm_factory import get_model  # או כל פרוויידר אחר שאתה עובד איתו
 
 # 1. הגדרת קוד המקור של הניסוי כמחרוזת
 TEST_SOURCE_CODE = """

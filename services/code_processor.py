@@ -2,7 +2,7 @@ import logging
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT
-from shared.config import get_model
+from shared.llm_factory import get_model
 
 logger = logging.getLogger(__name__)
 

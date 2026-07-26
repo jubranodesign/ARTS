@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from graph.state import AgentState
-from shared.config import DATA_DIR
+from shared.paths import DATA_DIR
 from shared.paths import normalize_relative_path
 
 logger = logging.getLogger(__name__)

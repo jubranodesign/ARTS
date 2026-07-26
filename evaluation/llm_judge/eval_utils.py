@@ -4,7 +4,7 @@ from typing import Type
 from pydantic import BaseModel
 from langchain_core.prompts import ChatPromptTemplate
 
-from shared.config import get_model
+from shared.llm_factory import get_model
 
 def evaluate_with_custom_judge(
     judgment_model: Type[BaseModel], 

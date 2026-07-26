@@ -8,7 +8,7 @@ from langgraph.graph.state import RunnableConfig
 
 from agents.writer_agent.prompts import REPAIR_PROMPT_TEMPLATE, WRITER_PROMPT_TEMPLATE
 from graph.state import AgentState
-from shared.config import MOCK_TOOL, TEST_FRAMEWORK
+from shared.constants import MOCK_TOOL, TEST_FRAMEWORK
 from shared.logging_rules import SHARED_LOGGING_RULES
 from utils.failure_analyzer import analyze_test_failure
 from utils.log_format import log_tail
