@@ -7,8 +7,8 @@ from graph.state import AgentState
 from shared.config import setup_node_llm
 from shared.paths import extract_python_path
 from utils.repo_files import read_repo_text_tool_response
+from utils.messages import TRIM_TOKENS_RESEARCHER, prepare_chat_history
 from utils.state import format_risk_context
-from utils.utils import get_trimmed_messages
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +60,9 @@ def call_researcher(state: AgentState, config: RunnableConfig):
 
     system_msg = SystemMessage(content=instruction_content)
 
-    # 3. סינון היסטוריה - משאירים רק Human, AI ו-Tool
-    # אנחנו מעיפים את ה-SystemMessage הקודם כדי שג'מיני לא יתבלבל מהסדר
-    clean_history = [m for m in all_messages if not isinstance(m, SystemMessage)]
-    
-    # 4. גזירה (Trim) למניעת חריגת טוקנים
-    trimmed_history = get_trimmed_messages(clean_history, llm, max_tokens=50000)
-
-    # 5. בניית הרשימה הסופית: [System, Human (מה-main), AI, Tool...]
+    trimmed_history = prepare_chat_history(
+        all_messages, llm, max_tokens=TRIM_TOKENS_RESEARCHER
+    )
     messages_to_send = [system_msg] + trimmed_history
 
     # 6. קריאה למודל

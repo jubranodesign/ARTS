@@ -1,9 +1,13 @@
 """Barrel re-exports for backward compatibility (`from utils.utils import ...`)."""
 
 from utils.messages import (
+    TRIM_TOKENS_AGENT,
+    TRIM_TOKENS_RESEARCHER,
     build_agent_messages,
     get_clean_text,
     get_trimmed_messages,
+    prepare_chat_history,
+    strip_system_messages,
     filter_only_successful_tests,
     get_all_processed_tool_data,
     extract_message_by_content
@@ -32,5 +36,9 @@ __all__ = [
     "filter_only_successful_tests",
     "get_all_processed_tool_data",
     "extract_message_by_content",
-    "parse_architecture_summary"
+    "parse_architecture_summary",
+    "prepare_chat_history",
+    "strip_system_messages",
+    "TRIM_TOKENS_AGENT",
+    "TRIM_TOKENS_RESEARCHER",
 ]

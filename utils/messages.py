@@ -1,5 +1,26 @@
+"""
+Message helpers for agent nodes.
+
+- ``build_agent_messages``: designer / reviewer / writer — read_local_file then execute.
+- ``prepare_chat_history``: researcher — rich system prompt + trimmed Human/AI/Tool history.
+"""
+
 from langchain_core.messages import SystemMessage, trim_messages
 from langchain_core.messages import HumanMessage, ToolMessage
+
+TRIM_TOKENS_AGENT = 10_000
+TRIM_TOKENS_RESEARCHER = 50_000
+
+
+def strip_system_messages(messages: list) -> list:
+    """Remove SystemMessage entries so a fresh system prompt can be prepended."""
+    return [m for m in messages if not isinstance(m, SystemMessage)]
+
+
+def prepare_chat_history(messages: list, llm, *, max_tokens: int) -> list:
+    """Strip old system messages, then trim remaining chat history."""
+    clean = strip_system_messages(messages)
+    return get_trimmed_messages(clean, llm, max_tokens=max_tokens)
 
 
 def get_clean_text(content):
@@ -50,13 +71,8 @@ def build_agent_messages(state, system_msg, target_file, execute_instruction, ll
             HumanMessage(content=f"Please read the file: {target_file}")
         ]
 
-    # ניקוי המערכת הישנה מההיסטוריה
-    clean_history = [m for m in messages if not isinstance(m, SystemMessage)]
-    
-    trimmed_history = get_trimmed_messages(
-        clean_history,
-        llm,
-        max_tokens=10000
+    trimmed_history = prepare_chat_history(
+        messages, llm, max_tokens=TRIM_TOKENS_AGENT
     )
     return [system_msg] + trimmed_history + [HumanMessage(content=execute_instruction)]
 
