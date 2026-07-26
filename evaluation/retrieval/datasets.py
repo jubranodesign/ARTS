@@ -1,18 +1,14 @@
 
-# TEST_SET מותאם לקוד ה-Scraper האמיתי
+# TEST_SET for fetch_studies (clinicaltrials.gov API v2 client)
 test_set = [
-    # בדיקת לוגיקת מסד הנתונים ב-scraper.py
-    ("how is the database session managed and committed", "session.commit()"),
-    
-    # בדיקת הטיפול בשגיאות (כאן חסר ה-rollback שדיברנו עליו!)
-    ("database exception handling and try except block", "except Exception as e"),
-    
-    # בדיקת הקריאה ל-API ב-scraper_api.py
-    ("where is the clinical trials api url defined", "clinicaltrials.gov"),
-    
-    # בדיקת הפרמטרים של ה-API
-    ("how are page size and format parameters passed to requests", "params ="),
-    
-    # בדיקת הזרקת התלויות (Imports)
-    ("which repositories are used to save studies", "from common.repositories import save_study")
+    ("where is the clinical trials API base URL defined", "clinicaltrials.gov/api/v2/studies"),
+    ("how are pageSize and format query parameters built for the API", "pageSize"),
+    ("how does the code call GET with timeout", "timeout=10"),
+    ("what happens when the HTTP response status is an error", "raise_for_status"),
+    ("how are studies extracted from the JSON response body", '.get("studies"'),
+    ("validation when page_size is not a positive integer", "page_size must be a positive integer"),
+    ("handling API request timeout errors", "requests.exceptions.Timeout"),
+    ("logging HTTP errors with status code", "HTTPError"),
+    ("network or request failures besides timeout and HTTP", "RequestException"),
+    ("module logger used for error messages", "logging.getLogger"),
 ]
