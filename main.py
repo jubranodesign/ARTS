@@ -19,6 +19,39 @@ from utils.utils import get_clean_text
 
 # טעינת משתני סביבה (API Keys) — load_dotenv() runs at top of this module
 
+_STREAM_CONFIG_DEFAULTS: dict = {
+    "thread_id": "test_invoke_session_001",
+    "model_provider": "mistral",
+    "ground_truth": (
+        "The scraper service orchestrates data pull via fetch_studies and persists it "
+        "using a session context manager with a single commit after the loop. Key "
+        "dependencies are common.db and common.repositories."
+    ),
+}
+
+_INVOKE_CONFIG_DEFAULTS: dict = {
+    "thread_id": "test_invoke_session_001",
+    "model_provider": "groq",
+}
+
+
+def build_graph_run_config(
+    repo_path: str,
+    vdb: VectorDBService,
+    processor: CodeProcessor,
+    *,
+    defaults: dict,
+    configurable: dict | None = None,
+) -> dict:
+    """Merge defaults + optional overrides; repo_path/vdb/processor always from call args."""
+    merged = {**defaults}
+    if configurable:
+        merged.update(configurable)
+    merged["repo_path"] = repo_path
+    merged["vdb"] = vdb
+    merged["processor"] = processor
+    return {"configurable": merged}
+
 
 def print_summary_evolution(app, thread_id):
     config = {"configurable": {"thread_id": thread_id}}
@@ -88,6 +121,7 @@ def run_test_system_stream(
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
+    configurable: dict | None = None,
 ):
     console = Console()
     app, conn = build_app()
@@ -99,6 +133,7 @@ def run_test_system_stream(
             vdb=vdb,
             processor=processor,
             user_task=user_task,
+            configurable=configurable,
         )
     finally:
         conn.close()
@@ -112,20 +147,18 @@ def _run_test_system_stream_impl(
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
+    configurable: dict | None = None,
 ):
     vdb_instance = vdb or VectorDBService()
     proc = processor or CodeProcessor()
-    thread_id = "test_invoke_session_001"
-    config = {
-        "configurable": {
-            "thread_id": thread_id,
-            "model_provider": "mistral",
-            "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories.",
-            "vdb": vdb_instance,
-            "processor": proc,
-            "repo_path": repo_path,
-        }
-    }
+    config = build_graph_run_config(
+        repo_path,
+        vdb_instance,
+        proc,
+        defaults=_STREAM_CONFIG_DEFAULTS,
+        configurable=configurable,
+    )
+    thread_id = config["configurable"]["thread_id"]
 
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)
@@ -239,11 +272,17 @@ def run_test_system(
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
+    configurable: dict | None = None,
 ):
     app, conn = build_app()
     try:
         _run_test_system_impl(
-            app, repo_path, vdb=vdb, processor=processor, user_task=user_task
+            app,
+            repo_path,
+            vdb=vdb,
+            processor=processor,
+            user_task=user_task,
+            configurable=configurable,
         )
     finally:
         conn.close()
@@ -256,19 +295,17 @@ def _run_test_system_impl(
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
+    configurable: dict | None = None,
 ):
     vdb_instance = vdb or VectorDBService()
     proc = processor or CodeProcessor()
-    thread_id = "test_invoke_session_001"
-    config = {
-        "configurable": {
-            "thread_id": thread_id,
-            "model_provider": "groq",
-            "vdb": vdb_instance,
-            "processor": proc,
-            "repo_path": repo_path,
-        }
-    }
+    config = build_graph_run_config(
+        repo_path,
+        vdb_instance,
+        proc,
+        defaults=_INVOKE_CONFIG_DEFAULTS,
+        configurable=configurable,
+    )
     user_task = resolve_user_task(user_task)
 
     print(f"🚀 Starting Test Agent System (STRICT INVOKE MODE)")
@@ -343,16 +380,25 @@ def run_agent_only(
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
+    configurable: dict | None = None,
 ) -> None:
     """Run the LangGraph agent only (assumes vector store already populated if needed)."""
     vdb_instance = vdb or VectorDBService()
     if invoke:
         run_test_system(
-            repo_path, vdb=vdb_instance, processor=processor, user_task=user_task
+            repo_path,
+            vdb=vdb_instance,
+            processor=processor,
+            user_task=user_task,
+            configurable=configurable,
         )
     else:
         run_test_system_stream(
-            repo_path, vdb=vdb_instance, processor=processor, user_task=user_task
+            repo_path,
+            vdb=vdb_instance,
+            processor=processor,
+            user_task=user_task,
+            configurable=configurable,
         )
 
 
@@ -364,6 +410,7 @@ def run_pipeline(
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
     user_task: str | None = None,
+    configurable: dict | None = None,
 ) -> None:
     """
     Optional ingest then agent run. No CLI — for run_local.py and notebooks.
@@ -379,6 +426,7 @@ def run_pipeline(
         vdb=vdb_instance,
         processor=processor,
         user_task=user_task,
+        configurable=configurable,
     )
 
 
