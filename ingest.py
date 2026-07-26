@@ -11,9 +11,8 @@ from services.code_processor import CodeProcessor
 from services.document_factory import DocumentFactory
 from services.scanner import CodeScanner
 from services.vector_db_service import VectorDBService
-from shared.config import DATA_DIR, VECTOR_STORE_PATH
+from shared.paths import DATA_DIR, VECTOR_STORE_PATH, get_repo_path, get_repo_seed_path
 from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT, SEED_SUMMARY_PROMPT
-from shared.paths import get_repo_path, get_repo_seed_path
 from utils.retrieval import (
     prepare_bm25_documents,
     print_chunks_summary,
