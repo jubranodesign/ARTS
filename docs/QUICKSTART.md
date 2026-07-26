@@ -2,6 +2,8 @@
 
 Full details: [README.md](../README.md).
 
+**Bring your own repo:** set `REPO_PATH` to your project; **ingest is required** (step below). No dataset ships with this repo.
+
 ```bash
 cp .env.example .env
 # Set REPO_PATH and MISTRAL_API_KEY (or other provider key)

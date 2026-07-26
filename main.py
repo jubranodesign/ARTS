@@ -328,5 +328,9 @@ if __name__ == "__main__":
     repo_path = resolve_repo_path(args.repo_path)
     user_task = resolve_user_task(args.task)
 
+    from shared.startup_checks import validate_runtime_startup
+
+    validate_runtime_startup(repo_path)
+
     vdb = create_vector_db()
     run_test_system_stream(repo_path, vdb, user_task=user_task)

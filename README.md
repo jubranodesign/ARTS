@@ -4,6 +4,12 @@ LangGraph multi-agent pipeline that ingests a target repository, scores code ris
 
 This is a **research / course-style** project, not a hosted SaaS. Expect local CLI, Rich streaming output, and Chroma + SQLite on disk.
 
+## Bring your own repo (no bundled dataset)
+
+This project **does not ship a target codebase or pre-built vector index**. Each user points **`REPO_PATH`** at **their own** repository (any Python project you want tests for), runs **ingestion locally**, then runs the agent. Generated tests and pytest run **inside that repo**; Chroma data lives under `./data/vector_store` on your machine (gitignored).
+
+**Ingest is required** before meaningful researcher retrieval — see step 3 below. `main.py` and `run_local.py` warn if the vector store is empty when you start an agent-only run.
+
 For a one-page cheat sheet, see [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
 ## Quickstart
@@ -32,13 +38,17 @@ Edit `.env`:
 - Set **`REPO_PATH`** to the repository you want to test (required).
 - Set **`MODEL_PROVIDER`** (default `mistral`) and the matching API key (e.g. `MISTRAL_API_KEY`).
 
-### 3. Ingest vector store (first time or after repo changes)
+### 3. Ingest vector store (**required** — first time or after repo changes)
+
+Index **your** repo into the local vector store (not included in git):
 
 ```bash
 python ingest.py --repo-path "%REPO_PATH%" --both
 ```
 
-Or use `run_local.py` with `RUN = "both"` and `INGEST_MODE = "both"`.
+Or use `run_local.py` with `RUN = "both"` and `INGEST_MODE = "both"` (ingest + agent in one go).
+
+Skip this only if you already ingested the same `REPO_PATH` and still have `./data/vector_store` populated.
 
 ### 4. Run the agent
 

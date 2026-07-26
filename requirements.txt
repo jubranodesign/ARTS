@@ -33,9 +33,6 @@ langgraph-cli[inmem]>=0.1.61
 sqlmodel>=0.0.22
 SQLAlchemy>=2.0.0
 
-# --- System Compatibility (Fixing previous gRPC errors) ---
-opentelemetry-exporter-otlp-proto-grpc==1.39.1
-
 # --- ML risk gate (wait_for_task / ml_predictor) ---
 radon>=6.0.0
 pandas>=2.0.0
