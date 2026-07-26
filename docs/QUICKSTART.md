@@ -2,6 +2,8 @@
 
 Full details: [README.md](../README.md).
 
+**Demos:** [LinkedIn (~5 min)](https://www.linkedin.com/feed/update/urn:li:activity:7470499709799821313/) · [YouTube (~30 min)](https://www.youtube.com/watch?v=hKFgm7mVf7I)
+
 **Bring your own repo:** set `REPO_PATH` to your project; **ingest is required** (step below). No dataset ships with this repo.
 
 ```bash

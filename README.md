@@ -2,6 +2,15 @@
 
 LangGraph multi-agent pipeline that ingests a target repository, scores code risk with an ML model, runs retrieval-augmented research, and generates pytest files **inside your repo** under test.
 
+**License:** [MIT](LICENSE) · **Status:** early open source — active development; [contributions welcome](CONTRIBUTING.md).
+
+## Demo
+
+- **Quick overview (~5 min):** [LinkedIn walkthrough](https://www.linkedin.com/feed/update/urn:li:activity:7470499709799821313/)
+- **Full system walkthrough (~30 min):** [YouTube](https://www.youtube.com/watch?v=hKFgm7mVf7I)
+
+[![Full demo on YouTube](https://img.youtube.com/vi/hKFgm7mVf7I/hqdefault.jpg)](https://www.youtube.com/watch?v=hKFgm7mVf7I)
+
 This is a **research / course-style** project, not a hosted SaaS. Expect local CLI, Rich streaming output, and Chroma + SQLite on disk.
 
 ## Bring your own repo (no bundled dataset)
