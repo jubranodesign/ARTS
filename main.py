@@ -82,19 +82,31 @@ def print_current_db_state(app, thread_id):
      print("="*50 + "\n")
 
 
-def run_test_system_stream(repo_path: str):
+def run_test_system_stream(
+    repo_path: str,
+    vdb: VectorDBService | None = None,
+    processor: CodeProcessor | None = None,
+):
     console = Console()
     app, conn = build_app()
     try:
-        return _run_test_system_stream_impl(console, app, repo_path)
+        return _run_test_system_stream_impl(
+            console, app, repo_path, vdb=vdb, processor=processor
+        )
     finally:
         conn.close()
         print("Cleanup: SQLite connection closed.")
 
 
-def _run_test_system_stream_impl(console, app, repo_path: str):
-    vdb_instance = VectorDBService()
-    processor = CodeProcessor()
+def _run_test_system_stream_impl(
+    console,
+    app,
+    repo_path: str,
+    vdb: VectorDBService | None = None,
+    processor: CodeProcessor | None = None,
+):
+    vdb_instance = vdb or VectorDBService()
+    proc = processor or CodeProcessor()
     thread_id = "test_invoke_session_001"
     config = {
         "configurable": {
@@ -102,7 +114,7 @@ def _run_test_system_stream_impl(console, app, repo_path: str):
             "model_provider": "mistral",
             "ground_truth": "The scraper service orchestrates data pull via fetch_studies and persists it using a session context manager with a single commit after the loop. Key dependencies are common.db and common.repositories.",
             "vdb": vdb_instance,
-            "processor": processor,
+            "processor": proc,
             "repo_path": repo_path,
         }
     }
@@ -215,26 +227,34 @@ def _run_test_system_stream_impl(console, app, repo_path: str):
         ))
 
 
-def run_test_system(repo_path: str):
+def run_test_system(
+    repo_path: str,
+    vdb: VectorDBService | None = None,
+    processor: CodeProcessor | None = None,
+):
     app, conn = build_app()
     try:
-        _run_test_system_impl(app, repo_path)
+        _run_test_system_impl(app, repo_path, vdb=vdb, processor=processor)
     finally:
         conn.close()
         print("Cleanup: SQLite connection closed.")
 
 
-def _run_test_system_impl(app, repo_path: str):
-    # 1. הגדרות בסיס
-    vdb_instance = VectorDBService()
-    processor = CodeProcessor()
+def _run_test_system_impl(
+    app,
+    repo_path: str,
+    vdb: VectorDBService | None = None,
+    processor: CodeProcessor | None = None,
+):
+    vdb_instance = vdb or VectorDBService()
+    proc = processor or CodeProcessor()
     thread_id = "test_invoke_session_001"
     config = {
         "configurable": {
             "thread_id": thread_id,
             "model_provider": "groq",
             "vdb": vdb_instance,
-            "processor": processor,
+            "processor": proc,
             "repo_path": repo_path,
         }
     }
@@ -283,6 +303,38 @@ def _run_test_system_impl(app, repo_path: str):
         # אם יש שגיאה, ננסה לשלוף את המצב האחרון לדיבאג
         current_state = app.get_state(config)
         print(f"Last Node Reached: {current_state.next}")
+
+
+def run_pipeline(
+    repo_path: str,
+    *,
+    ingest: str | None = None,
+    invoke: bool = False,
+    vdb: VectorDBService | None = None,
+    processor: CodeProcessor | None = None,
+) -> None:
+    """
+    Optional ingest then agent run. No CLI — for run_local.py and notebooks.
+
+    ingest: None | \"both\" | \"seed\" | \"source\"
+    """
+    from ingest import IngestMode, run_both_ingestion, run_ingestion_for_repo
+
+    vdb_instance = vdb or VectorDBService()
+
+    if ingest == "both":
+        run_both_ingestion(vdb_instance, repo_root=repo_path)
+    elif ingest == "seed":
+        run_ingestion_for_repo(vdb_instance, IngestMode.SEED, repo_root=repo_path)
+    elif ingest == "source":
+        run_ingestion_for_repo(vdb_instance, IngestMode.SOURCE, repo_root=repo_path)
+    elif ingest is not None:
+        raise ValueError(f"Unknown ingest mode: {ingest!r}")
+
+    if invoke:
+        run_test_system(repo_path, vdb=vdb_instance, processor=processor)
+    else:
+        run_test_system_stream(repo_path, vdb=vdb_instance, processor=processor)
 
 
 if __name__ == "__main__":
