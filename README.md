@@ -73,9 +73,25 @@ Set `LOG_LEVEL=DEBUG` in `.env` for detailed logs from `wait_for_task`, writer, 
 | `LOG_LEVEL` | `INFO` | Python logging (`DEBUG` for dev) |
 | `USER_TASK` | built-in default | Task when CLI/`run_local` task unset |
 
-Graph run overrides (thread id, provider per run): pass `configurable` from `run_local.py` as `GRAPH_CONFIG`, e.g. `{"model_provider": "groq", "thread_id": "dev-1"}`.
+### LangGraph `configurable` (per run)
 
-Single source for defaults: `shared/run_policy.py`.
+Built by `shared/graph_config.build_langgraph_run_config`. **Not** the same as `.env` policy vars.
+
+| Key | Required | Set via | Used by |
+|-----|----------|---------|---------|
+| `thread_id` | yes | default / `GRAPH_CONFIG` | SQLite checkpointer |
+| `model_provider` | yes | `MODEL_PROVIDER` env / `GRAPH_CONFIG` | all LLM nodes (`setup_node_llm`) |
+| `repo_path` | yes | `run_*` args (`REPO_PATH`) | wait_for_task, tools, writer, executor |
+| `vdb` | yes | `run_*` args | researcher tools, save_test |
+| `processor` | yes | `run_*` args | save_test |
+
+**`GRAPH_CONFIG` / `configurable=`** may only override: `thread_id`, `model_provider`. Unknown keys raise `ValueError`.
+
+**Env-only policy** (not in `configurable`): `RISK_THRESHOLD`, `MAX_TEST_ATTEMPTS` — see `shared/run_policy.py`.
+
+Example: `GRAPH_CONFIG = {"model_provider": "groq", "thread_id": "dev-1"}` in `run_local.py`.
+
+Single source for merge/validation: `shared/graph_config.py`. Defaults for provider/thread: `shared/run_policy.py` + `DEFAULT_THREAD_ID` in graph_config.
 
 ## Risk gate
 

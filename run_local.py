@@ -17,7 +17,7 @@ RUN = "agent"  # "ingest" | "agent" | "both"
 INGEST_MODE = "both"  # "both" | "seed" | "source" — used when RUN is "ingest" or "both"
 REPO_PATH = None  # None → REPO_PATH from .env via get_repo_path()
 USER_TASK = None  # None → USER_TASK env or DEFAULT_USER_TASK in shared/constants.py
-GRAPH_CONFIG: dict | None = None  # e.g. {"thread_id": "dev-1"} — model_provider defaults from MODEL_PROVIDER in .env
+GRAPH_CONFIG: dict | None = None  # optional: thread_id, model_provider — see shared/graph_config.py
 
 from shared.paths import get_repo_path
 from main import run_agent_only, run_ingest_only, run_pipeline

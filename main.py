@@ -15,15 +15,10 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from shared.constants import resolve_user_task
-from shared.run_policy import get_default_model_provider
+from shared.graph_config import build_langgraph_run_config
 from utils.utils import get_clean_text
 
 # טעינת משתני סביבה (API Keys) — load_dotenv() runs at top of this module
-
-_RUN_CONFIG_DEFAULTS: dict = {
-    "thread_id": "test_session_001",
-    "model_provider": get_default_model_provider(),
-}
 
 
 def build_graph_run_config(
@@ -31,17 +26,12 @@ def build_graph_run_config(
     vdb: VectorDBService,
     processor: CodeProcessor,
     *,
-    defaults: dict,
     configurable: dict | None = None,
 ) -> dict:
-    """Merge defaults + optional overrides; repo_path/vdb/processor always from call args."""
-    merged = {**defaults}
-    if configurable:
-        merged.update(configurable)
-    merged["repo_path"] = repo_path
-    merged["vdb"] = vdb
-    merged["processor"] = processor
-    return {"configurable": merged}
+    """Backward-compatible alias; see shared.graph_config."""
+    return build_langgraph_run_config(
+        repo_path, vdb, processor, overrides=configurable
+    )
 
 
 def print_summary_evolution(app, thread_id):
@@ -146,7 +136,6 @@ def _run_test_system_stream_impl(
         repo_path,
         vdb_instance,
         proc,
-        defaults=_RUN_CONFIG_DEFAULTS,
         configurable=configurable,
     )
     thread_id = config["configurable"]["thread_id"]
