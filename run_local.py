@@ -17,6 +17,7 @@ RUN = "both"  # "ingest" | "agent" | "both"
 INGEST_MODE = "both"  # "both" | "seed" | "source" — used when RUN is "ingest" or "both"
 USE_INVOKE = False  # used when RUN is "agent" or "both"
 REPO_PATH = None  # None → REPO_PATH from .env via get_repo_path()
+USER_TASK = None  # None → USER_TASK env or DEFAULT_USER_TASK in shared/constants.py
 
 from shared.paths import get_repo_path
 from main import run_agent_only, run_ingest_only, run_pipeline
@@ -28,9 +29,14 @@ def main() -> None:
     if RUN == "ingest":
         run_ingest_only(repo_path, INGEST_MODE)
     elif RUN == "agent":
-        run_agent_only(repo_path, invoke=USE_INVOKE)
+        run_agent_only(repo_path, invoke=USE_INVOKE, user_task=USER_TASK)
     elif RUN == "both":
-        run_pipeline(repo_path, ingest=INGEST_MODE, invoke=USE_INVOKE)
+        run_pipeline(
+            repo_path,
+            ingest=INGEST_MODE,
+            invoke=USE_INVOKE,
+            user_task=USER_TASK,
+        )
     else:
         raise ValueError(f"Unknown RUN mode: {RUN!r} (use ingest, agent, or both)")
 

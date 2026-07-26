@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from shared.constants import resolve_user_task
 from utils.utils import get_clean_text
 
 # טעינת משתני סביבה (API Keys) — load_dotenv() runs at top of this module
@@ -86,12 +87,18 @@ def run_test_system_stream(
     repo_path: str,
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
+    user_task: str | None = None,
 ):
     console = Console()
     app, conn = build_app()
     try:
         return _run_test_system_stream_impl(
-            console, app, repo_path, vdb=vdb, processor=processor
+            console,
+            app,
+            repo_path,
+            vdb=vdb,
+            processor=processor,
+            user_task=user_task,
         )
     finally:
         conn.close()
@@ -104,6 +111,7 @@ def _run_test_system_stream_impl(
     repo_path: str,
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
+    user_task: str | None = None,
 ):
     vdb_instance = vdb or VectorDBService()
     proc = processor or CodeProcessor()
@@ -122,8 +130,7 @@ def _run_test_system_stream_impl(
     console.print(f"\n🚀 [bold]Starting Test Agent System[/bold] (Thread: {thread_id})", style="blue")
     console.print("-" * 60)
 
-    # 1. המשימה
-    user_task = "Write unit tests for the file analysis_service/analysis.py"
+    user_task = resolve_user_task(user_task)
 
     # עדכון ה-State הראשוני
     app.update_state(config, {
@@ -231,10 +238,13 @@ def run_test_system(
     repo_path: str,
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
+    user_task: str | None = None,
 ):
     app, conn = build_app()
     try:
-        _run_test_system_impl(app, repo_path, vdb=vdb, processor=processor)
+        _run_test_system_impl(
+            app, repo_path, vdb=vdb, processor=processor, user_task=user_task
+        )
     finally:
         conn.close()
         print("Cleanup: SQLite connection closed.")
@@ -245,6 +255,7 @@ def _run_test_system_impl(
     repo_path: str,
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
+    user_task: str | None = None,
 ):
     vdb_instance = vdb or VectorDBService()
     proc = processor or CodeProcessor()
@@ -258,7 +269,7 @@ def _run_test_system_impl(
             "repo_path": repo_path,
         }
     }
-    user_task = "Write a comprehensive test for the scraper service, focusing on data validation."
+    user_task = resolve_user_task(user_task)
 
     print(f"🚀 Starting Test Agent System (STRICT INVOKE MODE)")
     print(f"Target Task: {user_task}")
@@ -331,13 +342,18 @@ def run_agent_only(
     invoke: bool = False,
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
+    user_task: str | None = None,
 ) -> None:
     """Run the LangGraph agent only (assumes vector store already populated if needed)."""
     vdb_instance = vdb or VectorDBService()
     if invoke:
-        run_test_system(repo_path, vdb=vdb_instance, processor=processor)
+        run_test_system(
+            repo_path, vdb=vdb_instance, processor=processor, user_task=user_task
+        )
     else:
-        run_test_system_stream(repo_path, vdb=vdb_instance, processor=processor)
+        run_test_system_stream(
+            repo_path, vdb=vdb_instance, processor=processor, user_task=user_task
+        )
 
 
 def run_pipeline(
@@ -347,6 +363,7 @@ def run_pipeline(
     invoke: bool = False,
     vdb: VectorDBService | None = None,
     processor: CodeProcessor | None = None,
+    user_task: str | None = None,
 ) -> None:
     """
     Optional ingest then agent run. No CLI — for run_local.py and notebooks.
@@ -361,6 +378,7 @@ def run_pipeline(
         invoke=invoke,
         vdb=vdb_instance,
         processor=processor,
+        user_task=user_task,
     )
 
 
@@ -376,10 +394,16 @@ if __name__ == "__main__":
         action="store_true",
         help="Use strict invoke mode instead of the default streaming run.",
     )
+    parser.add_argument(
+        "--task",
+        default=None,
+        help="Agent task prompt (default: USER_TASK env or built-in analysis_service request).",
+    )
     args = parser.parse_args()
     repo_path = resolve_repo_path(args.repo_path)
+    user_task = resolve_user_task(args.task)
 
     if args.invoke:
-        run_test_system(repo_path)
+        run_test_system(repo_path, user_task=user_task)
     else:
-        run_test_system_stream(repo_path)
+        run_test_system_stream(repo_path, user_task=user_task)
