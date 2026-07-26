@@ -17,3 +17,5 @@ Or edit `run_local.py` (`RUN = "both"`) and run `python run_local.py`.
 **Risk gate:** if the run ends after one node, check logs for `Risk low` — set `RISK_THRESHOLD=0.0` in `.env` to experiment.
 
 **Debug:** `LOG_LEVEL=DEBUG` in `.env`.
+
+**Eval (after ingest):** `python evaluation.py retrieval` — RAG: `pip install -e ".[eval]"` then `python evaluation.py rag`. See README § Offline evaluation.

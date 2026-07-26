@@ -155,4 +155,24 @@ Runs persist LangGraph state to `checkpoints.sqlite` (or `CHECKPOINT_DB`). Re-us
 - Entry points call `configure_logging()` after `load_dotenv()`. `build_app()` does **not** change log level, so `LOG_LEVEL=DEBUG` stays active for the whole run.
 - Do not commit `.env` or `data/vector_store/` (see `.gitignore`).
 
-For deeper evaluation workflows, see scripts under `evaluation/`. **Ground truth** for Ragas/metrics lives in evaluation datasets (e.g. `evaluation/rag/researcher_agent/datasets.py`), not in `main.py` or `GRAPH_CONFIG`.
+For deeper evaluation workflows, see below. **Ground truth** for Ragas lives in evaluation datasets, not in `main.py` or `GRAPH_CONFIG`.
+
+## Offline evaluation
+
+Evaluations are **separate from the agent graph**. They help you check retrieval quality and a bundled researcher RAG sample after you **ingest your own repo**.
+
+1. Set `REPO_PATH` and run ingest (datasets in `evaluation/retrieval/datasets.py` target scraper-style queries — edit them for your codebase).
+2. **Retrieval** (uses your local Chroma index):
+
+```bash
+python evaluation.py retrieval
+```
+
+3. **RAG / Ragas** (optional extra; uses static sample in `evaluation/rag/researcher_agent/datasets.py`):
+
+```bash
+pip install -e ".[eval]"
+python evaluation.py rag
+```
+
+Requires LLM + embedding API keys (same as the agent). For a different project, update the dataset files under `evaluation/retrieval/` and `evaluation/rag/`.
