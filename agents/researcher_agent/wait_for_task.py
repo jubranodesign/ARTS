@@ -1,7 +1,10 @@
-from langgraph.graph.state import RunnableConfig
 import logging
+
+from langgraph.graph.state import RunnableConfig
+
 from graph.state import AgentState
 from ml_predictor.utils import predict_risk
+from utils.log_format import log_tail
 from utils.paths import extract_python_path
 from utils.repo_files import read_repo_text
 
@@ -9,25 +12,43 @@ logger = logging.getLogger(__name__)
 
 
 def wait_for_task(state: AgentState, config: RunnableConfig):
-    logger.debug("wait_for_task")
     repo_path = config["configurable"]["repo_path"]
-    # נניח שתוכן הקובץ נמצא ב-state או שאנחנו קוראים אותו מנתיב
     user_task = state.get("user_input")
-    target_file = extract_python_path(user_task)
+
+    if not user_task or not str(user_task).strip():
+        logger.warning("wait_for_task: user_input is missing or empty")
+    else:
+        logger.debug(
+            "wait_for_task user_task preview: %s",
+            log_tail(str(user_task), max_chars=300, max_lines=5),
+        )
+
+    target_file = extract_python_path(user_task or "")
+    logger.debug("wait_for_task repo_path=%s target_file=%r", repo_path, target_file)
+
     code_content = read_repo_text(repo_path, target_file)
+    logger.debug("wait_for_task code_len=%s", len(code_content or ""))
 
     risk, top_reasons = predict_risk(code_content)
-    
-    # הכנת הרשימה ל-State
+
     reasons_for_state = []
     for feat, data in top_reasons:
-        reasons_for_state.append({
-            "feature": feat,
-            "impact": float(data['importance']),
-            "value": float(data['value'])
-        })
+        reasons_for_state.append(
+            {
+                "feature": feat,
+                "impact": float(data["importance"]),
+                "value": float(data["value"]),
+            }
+        )
+
+    logger.info(
+        "wait_for_task risk_score=%.4f target_file=%r (threshold 0.2 for researcher)",
+        float(risk),
+        target_file,
+    )
+    logger.debug("wait_for_task top_reasons=%s", reasons_for_state)
 
     return {
         "risk_score": float(risk),
-        "risk_reasons": reasons_for_state, # נשמר ב-State לסבבים הבאים
+        "risk_reasons": reasons_for_state,
     }
