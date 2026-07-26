@@ -18,4 +18,4 @@ Or edit `run_local.py` (`RUN = "both"`) and run `python run_local.py`.
 
 **Debug:** `LOG_LEVEL=DEBUG` in `.env`.
 
-**Eval (after ingest):** `python evaluation.py retrieval` — RAG: `pip install -e ".[eval]"` then `python evaluation.py rag`. See README § Offline evaluation.
+**Eval (after ingest):** `python evaluation.py retrieval` or `python run_eval_local.py` — RAG: `pip install -e ".[eval]"` then `RUN=rag`. See README § Offline evaluation.

@@ -173,6 +173,15 @@ python evaluation.py retrieval
 ```bash
 pip install -e ".[eval]"
 python evaluation.py rag
+# or: python -m evaluation rag
+```
+
+**Without CLI** — edit `run_eval_local.py` (`RUN = "retrieval"` | `"rag"`) or import:
+
+```python
+from evaluation import run_retrieval_eval, run_rag_eval
+run_retrieval_eval(vdb)  # pass shared VectorDBService after ingest
+run_rag_eval()
 ```
 
 Requires LLM + embedding API keys (same as the agent). For a different project, update the dataset files under `evaluation/retrieval/` and `evaluation/rag/`.
