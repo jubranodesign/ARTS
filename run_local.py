@@ -1,5 +1,5 @@
 """
-Local dev entry: ingest + agent without CLI. Edit the flags below, then:
+Local dev entry without CLI. Set RUN and related flags, then:
 
     python run_local.py
 """
@@ -13,19 +13,26 @@ from shared.logging_config import configure_logging
 configure_logging()
 
 # --- edit for each run ---
-DO_INGEST = True
-INGEST_MODE = "both"  # "both" | "seed" | "source" (ignored when DO_INGEST is False)
-USE_INVOKE = False
+RUN = "both"  # "ingest" | "agent" | "both"
+INGEST_MODE = "both"  # "both" | "seed" | "source" — used when RUN is "ingest" or "both"
+USE_INVOKE = False  # used when RUN is "agent" or "both"
 REPO_PATH = None  # None → REPO_PATH from .env via get_repo_path()
 
 from shared.paths import get_repo_path
-from main import run_pipeline
+from main import run_agent_only, run_ingest_only, run_pipeline
 
 
 def main() -> None:
     repo_path = REPO_PATH or get_repo_path()
-    ingest = INGEST_MODE if DO_INGEST else None
-    run_pipeline(repo_path, ingest=ingest, invoke=USE_INVOKE)
+
+    if RUN == "ingest":
+        run_ingest_only(repo_path, INGEST_MODE)
+    elif RUN == "agent":
+        run_agent_only(repo_path, invoke=USE_INVOKE)
+    elif RUN == "both":
+        run_pipeline(repo_path, ingest=INGEST_MODE, invoke=USE_INVOKE)
+    else:
+        raise ValueError(f"Unknown RUN mode: {RUN!r} (use ingest, agent, or both)")
 
 
 if __name__ == "__main__":

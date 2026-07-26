@@ -305,6 +305,41 @@ def _run_test_system_impl(
         print(f"Last Node Reached: {current_state.next}")
 
 
+def run_ingest_only(
+    repo_path: str,
+    ingest: str = "both",
+    vdb: VectorDBService | None = None,
+) -> VectorDBService:
+    """Ingest seed/source/both into Chroma (+ BM25 on source). No graph run."""
+    from ingest import IngestMode, run_both_ingestion, run_ingestion_for_repo
+
+    vdb_instance = vdb or VectorDBService()
+    if ingest == "both":
+        run_both_ingestion(vdb_instance, repo_root=repo_path)
+    elif ingest == "seed":
+        run_ingestion_for_repo(vdb_instance, IngestMode.SEED, repo_root=repo_path)
+    elif ingest == "source":
+        run_ingestion_for_repo(vdb_instance, IngestMode.SOURCE, repo_root=repo_path)
+    else:
+        raise ValueError(f"Unknown ingest mode: {ingest!r}")
+    return vdb_instance
+
+
+def run_agent_only(
+    repo_path: str,
+    *,
+    invoke: bool = False,
+    vdb: VectorDBService | None = None,
+    processor: CodeProcessor | None = None,
+) -> None:
+    """Run the LangGraph agent only (assumes vector store already populated if needed)."""
+    vdb_instance = vdb or VectorDBService()
+    if invoke:
+        run_test_system(repo_path, vdb=vdb_instance, processor=processor)
+    else:
+        run_test_system_stream(repo_path, vdb=vdb_instance, processor=processor)
+
+
 def run_pipeline(
     repo_path: str,
     *,
@@ -316,25 +351,17 @@ def run_pipeline(
     """
     Optional ingest then agent run. No CLI — for run_local.py and notebooks.
 
-    ingest: None | \"both\" | \"seed\" | \"source\"
+    ingest: None | \"both\" | \"seed\" | \"source\" (None = agent only)
     """
-    from ingest import IngestMode, run_both_ingestion, run_ingestion_for_repo
-
     vdb_instance = vdb or VectorDBService()
-
-    if ingest == "both":
-        run_both_ingestion(vdb_instance, repo_root=repo_path)
-    elif ingest == "seed":
-        run_ingestion_for_repo(vdb_instance, IngestMode.SEED, repo_root=repo_path)
-    elif ingest == "source":
-        run_ingestion_for_repo(vdb_instance, IngestMode.SOURCE, repo_root=repo_path)
-    elif ingest is not None:
-        raise ValueError(f"Unknown ingest mode: {ingest!r}")
-
-    if invoke:
-        run_test_system(repo_path, vdb=vdb_instance, processor=processor)
-    else:
-        run_test_system_stream(repo_path, vdb=vdb_instance, processor=processor)
+    if ingest is not None:
+        vdb_instance = run_ingest_only(repo_path, ingest, vdb=vdb_instance)
+    run_agent_only(
+        repo_path,
+        invoke=invoke,
+        vdb=vdb_instance,
+        processor=processor,
+    )
 
 
 if __name__ == "__main__":
