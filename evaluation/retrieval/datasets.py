@@ -1,3 +1,5 @@
+# Ground-truth keywords are matched against Chroma page_content (LLM summaries), not
+# metadata["source_code"] or BM25. See README § Offline evaluation / Ingestion & retrieval storage.
 
 # TEST_SET for fetch_studies (clinicaltrials.gov API v2 client)
 test_set = [

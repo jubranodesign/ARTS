@@ -59,6 +59,8 @@ Or use `run_local.py` with `RUN = "both"` and `INGEST_MODE = "both"` (ingest + a
 
 Skip this only if you already ingested the same `REPO_PATH` and still have `./data/vector_store` populated.
 
+How summaries, raw code, and BM25 relate: [Ingestion & retrieval storage](#ingestion--retrieval-storage).
+
 ### 4. Run the agent
 
 **CLI:**
@@ -80,6 +82,31 @@ Set `LOG_LEVEL=DEBUG` in `.env` for detailed logs from `wait_for_task`, writer, 
 
 - Rich panels per graph node (researcher, designer, writer, executor).
 - If the run **stops early** with little output, see [Risk gate](#risk-gate) below.
+
+## Ingestion & retrieval storage
+
+Ingestion uses a **dual-index** design: the same source chunks are stored differently for semantic vs keyword retrieval.
+
+### Chroma (`data/vector_store/`)
+
+- Source and seed files are split into chunks, then **enriched with an LLM summary** (`services/code_processor.py`).
+- **Embeddings** are computed on **`page_content`** (the summary), not on raw syntax.
+- The **original chunk** is kept in **`metadata["source_code"]`** and is returned with semantic search (`VectorDBService.search_code`).
+
+### BM25 (`data/bm25_index.pkl`)
+
+- Built only when ingesting **production source** (not seed-only runs).
+- Indexes **raw Python text** from each chunk (`utils/retrieval.prepare_bm25_documents`), excluding test/seed files.
+- Loaded by the researcher tool **`search_dependencies_bm25`** for dependency / symbol lookup.
+
+### Researcher vs offline eval
+
+| Consumer | Semantic (Chroma) | Keyword (BM25 / raw code) |
+|----------|-------------------|---------------------------|
+| Live agent (`agents/researcher_agent/tools.py`) | Yes | Yes (BM25) |
+| `python evaluation.py retrieval` | Yes | **No** — metrics match keywords against **`page_content` only** |
+
+After changing `REPO_PATH` or target code, re-run `python ingest.py --repo-path ... --both` so Chroma and BM25 stay in sync.
 
 ## Configuration reference
 
@@ -133,7 +160,7 @@ The compiled graph uses `interrupt_before=["wait_for_task"]` for LangGraph Studi
 
 ### Ingestion required
 
-Semantic/BM25 tools expect a populated Chroma store under `data/vector_store`. Run **`ingest.py`** (or `RUN=both` in `run_local.py`) before expecting useful researcher retrieval.
+Semantic/BM25 tools expect a populated Chroma store under `data/vector_store` and (for source ingest) `data/bm25_index.pkl`. Run **`ingest.py --both`** (or `RUN=both` in `run_local.py`) before expecting useful researcher retrieval. See [Ingestion & retrieval storage](#ingestion--retrieval-storage).
 
 ### ML model at import
 
@@ -171,7 +198,10 @@ For deeper evaluation workflows, see below. **Ground truth** for Ragas lives in 
 Evaluations are **separate from the agent graph**. They help you check retrieval quality and a bundled researcher RAG sample after you **ingest your own repo**.
 
 1. Set `REPO_PATH` and run ingest (datasets in `evaluation/retrieval/datasets.py` target scraper-style queries — edit them for your codebase).
-2. **Retrieval** (uses your local Chroma index):
+
+**Retrieval eval vs live retrieval:** `python evaluation.py retrieval` only queries **Chroma** (semantic search on LLM **summaries** in `page_content`). It does **not** use the BM25 index or match against raw code in `metadata["source_code"]`. The bundled dataset uses literal code-style keywords — for your repo, prefer phrases that appear in summaries, or extend `evaluation/retrieval/metrics.py` to check `source_code` as well. See [Ingestion & retrieval storage](#ingestion--retrieval-storage).
+
+2. **Retrieval** (Chroma-only metrics):
 
 ```bash
 python evaluation.py retrieval

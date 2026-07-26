@@ -18,7 +18,7 @@ Thank you for considering a contribution. This project is **early open source** 
 Optional:
 
 - RAG eval: `pip install -e ".[eval]"` then `python evaluation.py rag` or `run_eval_local.py`
-- Retrieval eval: `python evaluation.py retrieval` (needs ingest first)
+- Retrieval eval: `python evaluation.py retrieval` (needs ingest first; **Chroma summaries only** — not BM25. Low scores with code-literal keywords are often expected until you tune `evaluation/retrieval/datasets.py` or metrics — see README § Offline evaluation)
 
 Do **not** commit `.env`, `data/vector_store/`, or checkpoint SQLite files.
 
