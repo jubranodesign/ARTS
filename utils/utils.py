@@ -20,7 +20,7 @@ from shared.paths import (
     normalize_relative_path,
 )
 from utils.state import count_test_cases_from_list, parse_architecture_summary
-from utils.testing import run_pytest
+from utils.testing import run_pytest, run_tests
 
 __all__ = [
     "build_agent_messages",
@@ -33,6 +33,7 @@ __all__ = [
     "normalize_relative_path",
     "get_trimmed_messages",
     "run_pytest",
+    "run_tests",
     "filter_only_successful_tests",
     "get_all_processed_tool_data",
     "extract_message_by_content",

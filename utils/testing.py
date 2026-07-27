@@ -2,6 +2,8 @@ import subprocess
 import sys
 from typing import Tuple
 
+from shared.repo_language import effective_repo_language
+
 
 def run_pytest(
     full_path: str,
@@ -39,4 +41,17 @@ def run_pytest(
         )
     except Exception as e:
         return "failed", f"Execution Error: {str(e)}"
+
+
+def run_tests(
+    full_path: str,
+    repo_path: str,
+    env: dict[str, str] | None = None,
+    timeout: int = 60,
+    *,
+    language: str | None = None,
+) -> Tuple[str, str]:
+    """Run tests for the configured repo language (python only today)."""
+    effective_repo_language()
+    return run_pytest(full_path, repo_path, env=env, timeout=timeout)
 

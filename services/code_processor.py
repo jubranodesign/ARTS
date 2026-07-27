@@ -1,23 +1,24 @@
 import logging
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT
 from shared.llm_factory import get_model
+from shared.repo_language import effective_repo_language, get_splitter_kwargs, resolve_repo_language
 
 logger = logging.getLogger(__name__)
 
 
 class CodeProcessor:
     def __init__(self, provider: str = "groq", summary_prompt=CHUNK_SUMMARY_PROMPT):
-        # 1. הגדרת החותך המומחה לפייתון (נשאר כפי שהיה)
+        lang = effective_repo_language()
         self.splitter = RecursiveCharacterTextSplitter.from_language(
-            language=Language.PYTHON,
-            chunk_size=1000, 
-            chunk_overlap=150
+            **get_splitter_kwargs(lang),
         )
-        
-        # 2. אתחול מודל ה-LLM עבור תהליך ה-Ingestion באמצעות ה-provider שהוזרק
-        # אנו מקבעים temperature=0 כדי להבטיח תיאורים עובדתיים, מדויקים ויציבים
+        logger.info(
+            "CodeProcessor text splitter: effective_language=%s (REPO_LANGUAGE=%s)",
+            lang,
+            resolve_repo_language(),
+        )
         logger.info("CodeProcessor initializing LLM for ingestion using provider: %s", provider)
         self.llm = get_model(provider=provider, temperature=0)
         self.summary_prompt = summary_prompt

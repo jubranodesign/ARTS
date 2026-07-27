@@ -165,6 +165,7 @@ Use paths **relative to `REPO_PATH`**. Offline eval datasets under `evaluation/`
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `REPO_PATH` | — | Target repo (required) |
+| `REPO_LANGUAGE` | `python` | Ingest splitter / test runner hook; only **python** supported (others fall back with a warning) |
 | `REPO_SEED_PATH` | `<REPO_PATH>/seed_data` | Golden pytest examples for ingest seed pass |
 | `MODEL_PROVIDER` | `mistral` | LLM backend for all agent nodes |
 | `RISK_THRESHOLD` | `0.2` | Min ML risk score to enter researcher path |

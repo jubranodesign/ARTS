@@ -5,7 +5,7 @@ from langgraph.graph.state import RunnableConfig
 
 from graph.state import AgentState
 from shared.paths import get_safe_full_path
-from utils.testing import run_pytest
+from utils.testing import run_tests
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +43,8 @@ def call_executor(state: AgentState, config: RunnableConfig):
     logger.info("Running pytest on full path: %s", full_test_file_path)
 
     # 5. מריצים את ה-Pytest על קובץ הטסט, עם ה-env שמכיר את קוד המקור!
-    status, logs = run_pytest(
-        full_path=full_test_file_path, # <-- מריצים את קובץ הטסט!
+    status, logs = run_tests(
+        full_path=full_test_file_path,
         repo_path=repo_path,
         env=env,
         timeout=60,
