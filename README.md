@@ -50,6 +50,7 @@ Edit `.env`:
 - Copy from [`.env.example`](.env.example) any keys you are missing (merge; do not wipe existing secrets).
 - Set **`REPO_PATH`** to the repository you want to test (required).
 - Set **`MODEL_PROVIDER`** (default `mistral`) and the matching API key (e.g. `MISTRAL_API_KEY`).
+- **`REPO_LANGUAGE`** defaults to **`python`**. Other values log a warning and behave as Python (multi-language repos are not implemented yet; see [Limitations](#python-only-target-repos-today)).
 - Optionally set **`USER_TASK`** or pass `--task` (default matches the [demo task](#demo); see [Agent task](#agent-task-user_task)).
 
 #### Golden seed data (your examples)
@@ -120,6 +121,7 @@ Ingestion uses a **dual-index** design: the same source chunks are stored differ
 ### Chroma (`data/vector_store/`)
 
 - Source and seed files are split into chunks, then **enriched with an LLM summary** (`services/code_processor.py`).
+- Chunk splitting uses **`REPO_LANGUAGE`** via `shared/repo_language.py` (effective language is **python** today).
 - **Embeddings** are computed on **`page_content`** (the summary), not on raw syntax.
 - The **original chunk** is kept in **`metadata["source_code"]`** and is returned with semantic search (`VectorDBService.search_code`).
 
@@ -211,6 +213,10 @@ Read these before running on an important repository.
 ### Demo validation scope
 
 Documented demos and the default **`USER_TASK`** above were **not** stress-tested on complicated cases (multi-service repos, async/concurrency, full error matrices, security-sensitive code). Treat output as a **starting point** for human review.
+
+### Python-only target repos (today)
+
+ARTS is built around **Python** target repositories: `.py` scanning, **pytest** execution, Radon + ML **risk gate**, and agent prompts assume pytest/unittest.mock patterns. **`REPO_LANGUAGE`** is a forward-looking hook for ingest splitting and the test runner (`shared/repo_language.py`); only **`python`** is supported — any other value **falls back to python** with a log warning and does not enable another language yet.
 
 ### Graph interrupt (`wait_for_task`)
 
