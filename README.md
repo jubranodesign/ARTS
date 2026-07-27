@@ -4,6 +4,8 @@
 
 **License:** [MIT](LICENSE) · **Status:** early open source — active development; [contributions welcome](CONTRIBUTING.md).
 
+> **Before you run:** Read **[Limitations](#limitations)** (risk gate, Python-only scope, BYOR seeds, demo validation). Install **your target repo’s dependencies** in the same Python environment as ARTS so pytest can import them — see [docs/TARGET_REPO.md](docs/TARGET_REPO.md). Full pipeline and hybrid retrieval: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Demo
 
 - **Quick overview (~5 min):** [LinkedIn walkthrough](https://www.linkedin.com/feed/update/urn:li:activity:7470499709799821313/)
@@ -24,6 +26,36 @@ This project **does not ship a target codebase, golden test seeds, or pre-built 
 **Ingest is required** before meaningful researcher retrieval — see step 3 below. `main.py` and `run_local.py` warn if the vector store is empty when you start an agent-only run.
 
 For a one-page cheat sheet, see [docs/QUICKSTART.md](docs/QUICKSTART.md).
+
+## Hybrid retrieval (at a glance)
+
+ARTS does **not** fuse BM25 and vectors into a single ranked list. **Ingest** builds two indexes; the **researcher agent** chooses tools (LLM-driven hybrid RAG):
+
+| Tool | Index | Use for |
+|------|--------|---------|
+| `search_dependencies_bm25` | `data/bm25_index.pkl` (raw source text) | Exact dependency / `def` / `class` implementations |
+| `search_source_code_semantic` | Chroma (LLM summaries on source) | Conceptual “what does this logic do?” in production code |
+| `search_golden_tests_semantic` | Chroma (seed / test chunks, `is_test=True`) | How **your** repo mocks, fixtures, and patterns |
+
+```mermaid
+flowchart LR
+  subgraph ingest [Ingest --both]
+    Code[Source + seed chunks]
+    Code --> Sum[LLM summary]
+    Sum --> Chroma[(Chroma)]
+    Code --> BM25[(bm25_index.pkl)]
+  end
+  subgraph tools [Researcher tools]
+    T1[search_dependencies_bm25]
+    T2[search_source_code_semantic]
+    T3[search_golden_tests_semantic]
+  end
+  BM25 --> T1
+  Chroma --> T2
+  Chroma --> T3
+```
+
+Semantic hits return **description + `metadata.source_code`** (`VectorDBService.search_code`). Details, LangGraph flow, and production notes: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ## Quickstart
 
@@ -49,6 +81,7 @@ Edit `.env`:
 
 - Copy from [`.env.example`](.env.example) any keys you are missing (merge; do not wipe existing secrets).
 - Set **`REPO_PATH`** to the repository you want to test (required).
+- Install **target repo libraries** in this environment (e.g. `pip install -r "%REPO_PATH%/requirements.txt"`) — see [docs/TARGET_REPO.md](docs/TARGET_REPO.md).
 - Set **`MODEL_PROVIDER`** (default `mistral`) and the matching API key (e.g. `MISTRAL_API_KEY`).
 - **`REPO_LANGUAGE`** defaults to **`python`**. Other values log a warning and behave as Python (multi-language repos are not implemented yet; see [Limitations](#python-only-target-repos-today)).
 - Optionally set **`USER_TASK`** or pass `--task` (default matches the [demo task](#demo); see [Agent task](#agent-task-user_task)).
@@ -232,7 +265,7 @@ Semantic/BM25 tools expect a populated Chroma store under `data/vector_store` an
 
 ### Writes and pytest under `REPO_PATH`
 
-The writer uses tools to **read and write files under `REPO_PATH`**, typically under `tests/…`. The executor runs **`pytest`** on those paths with `cwd=REPO_PATH`. Use a disposable clone or branch — not production code without review.
+The writer uses tools to **read and write files under `REPO_PATH`**, typically under `tests/…`. The executor runs **`pytest`** on those paths with `cwd=REPO_PATH` using the **same Python interpreter as ARTS** — your repo’s packages must be installed there ([docs/TARGET_REPO.md](docs/TARGET_REPO.md)). Use a disposable clone or branch — not production code without review.
 
 ### Checkpoint SQLite
 
@@ -242,6 +275,9 @@ Runs persist LangGraph state to `checkpoints.sqlite` (or `CHECKPOINT_DB`). Re-us
 
 | Path | Role |
 |------|------|
+| `docs/QUICKSTART.md` | Condensed setup |
+| `docs/ARCHITECTURE.md` | LangGraph flow, hybrid retrieval, multi-vector ingest |
+| `docs/TARGET_REPO.md` | BYOR dependencies, seeds, local vs isolated runtime |
 | `main.py` | CLI + streaming UX |
 | `run_local.py` | Dev entry (`RUN=ingest\|agent\|both`) |
 | `ingest.py` | Chroma + BM25 ingestion |

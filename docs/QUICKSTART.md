@@ -4,7 +4,7 @@
 
 **Demos:** [LinkedIn (~5 min)](https://www.linkedin.com/feed/update/urn:li:activity:7470499709799821313/) · [YouTube (~30 min)](https://www.youtube.com/watch?v=hKFgm7mVf7I)
 
-**Bring your own repo:** set `REPO_PATH`; add **`seed_data/`** golden pytest examples (your style); run **`ingest --both`**. ARTS does not ship a target repo or seeds.
+**Bring your own repo:** set `REPO_PATH`; add **`seed_data/`**; install **target repo deps** ([TARGET_REPO.md](TARGET_REPO.md)); **`ingest --both`**. Architecture: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 **Demo task (default):** `Write unit tests for the file analysis_service/analysis.py` — smoke runs only; **complex cases were not validated**. See README § Demo / Limitations.
 
