@@ -30,8 +30,8 @@ For a one-page cheat sheet, see [docs/QUICKSTART.md](docs/QUICKSTART.md).
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/jubranodesign/Agentic-Test-system.git
-cd Agentic-Test-system
+git clone https://github.com/jubranodesign/ARTS.git
+cd ARTS
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 # Linux/macOS: source .venv/bin/activate

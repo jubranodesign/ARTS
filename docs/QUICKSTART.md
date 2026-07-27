@@ -9,8 +9,8 @@
 **Demo task (default):** `Write unit tests for the file analysis_service/analysis.py` — smoke runs only; **complex cases were not validated**. See README § Demo / Limitations.
 
 ```bash
-git clone https://github.com/jubranodesign/Agentic-Test-system.git
-cd Agentic-Test-system
+git clone https://github.com/jubranodesign/ARTS.git
+cd ARTS
 cp .env.example .env
 # Set REPO_PATH and MISTRAL_API_KEY (or other provider key)
 pip install -e .

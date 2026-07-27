@@ -10,7 +10,7 @@ Thank you for considering a contribution to **ARTS** (*Agentic Repo Test System*
 
 ## Local setup
 
-1. Clone `https://github.com/jubranodesign/Agentic-Test-system.git`, create a venv, `pip install -e .`
+1. Clone `https://github.com/jubranodesign/ARTS.git`, create a venv, `pip install -e .`
 2. Copy [`.env.example`](.env.example) to `.env` — set `REPO_PATH` (your target repo), add **`seed_data/`** in that repo, and API keys for `MODEL_PROVIDER`
 3. Ingest: `python ingest.py --repo-path "%REPO_PATH%" --both` (seed + source)
 4. Run the agent: `python main.py --repo-path "%REPO_PATH%"` (default demo task: `analysis_service/analysis.py`) or edit and run `run_local.py`
