@@ -19,6 +19,21 @@ This is a **research / course-style** project, not a hosted SaaS. Expect local C
 `Write unit tests for the file analysis_service/analysis.py`  
 (that path lives in **your** `REPO_PATH`, not in ARTS). Those runs were **smoke / happy-path** only — **complex scenarios were not systematically tested** (large repos, deep integration, exhaustive edge cases). Review generated tests before you rely on them.
 
+## Why ARTS? (and when to use something else)
+
+**Modern IDE agents** (Cursor, Claude Code, Codex SDK, etc.) with **spawn/hooks** and **code coverage in CI** are often enough for day-to-day test generation and review. ARTS is **not** claiming to replace that workflow.
+
+**ARTS is a reference / self-hosted pipeline** for teams or learners who want:
+
+- **Bring-your-own-repo** ingestion with **hybrid retrieval** (Chroma + BM25) over *your* codebase and golden seeds
+- A **fixed LangGraph workflow** (research → plan → write → pytest → bounded repair) that is **auditable** via checkpoints and explicit routing
+- **LLM-agnostic** runs (swap `MODEL_PROVIDER`) and optional **on-prem** models — no dependency on a single vendor IDE
+- An **ML risk gate** before expensive agent steps on large trees (see [Risk gate](#risk-gate))
+
+**Not a fit** if you only need ad-hoc tests in the editor, or if you need **security scanning / dynamic attack** tooling — that is [roadmap interest only](docs/ROADMAP.md), not shipped today.
+
+Future directions (community / ideas): [docs/ROADMAP.md](docs/ROADMAP.md).
+
 ## Bring your own repo (no bundled dataset)
 
 This project **does not ship a target codebase, golden test seeds, or pre-built vector index**. Each user points **`REPO_PATH`** at **their own** repository (any Python project you want tests for), adds **golden pytest examples** under `seed_data/` (see below), runs **ingestion locally**, then runs the agent. Generated tests and pytest run **inside that repo**; Chroma data lives under `./data/vector_store` on your machine (gitignored).
@@ -269,7 +284,7 @@ The writer uses tools to **read and write files under `REPO_PATH`**, typically u
 
 ### Checkpoint SQLite
 
-Runs persist LangGraph state to `checkpoints.sqlite` (or `CHECKPOINT_DB`). Re-use the same `thread_id` to continue threads; delete the file for a clean slate.
+Runs persist LangGraph state to `checkpoints.sqlite` (or `CHECKPOINT_DB`). Re-use the same `thread_id` to continue threads; delete the file for a clean slate. Checkpoints support **audit and resume** — they do **not** automatically revert failed test-repair attempts to an earlier graph state (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) § Test repair loop).
 
 ## Project layout (short)
 
@@ -278,6 +293,7 @@ Runs persist LangGraph state to `checkpoints.sqlite` (or `CHECKPOINT_DB`). Re-us
 | `docs/QUICKSTART.md` | Condensed setup |
 | `docs/ARCHITECTURE.md` | LangGraph flow, hybrid retrieval, multi-vector ingest |
 | `docs/TARGET_REPO.md` | BYOR dependencies, seeds, local vs isolated runtime |
+| `docs/ROADMAP.md` | Future ideas (not implemented): security plugin, sandbox executor, eval |
 | `main.py` | CLI + streaming UX |
 | `run_local.py` | Dev entry (`RUN=ingest\|agent\|both`) |
 | `ingest.py` | Chroma + BM25 ingestion |

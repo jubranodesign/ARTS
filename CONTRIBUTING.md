@@ -4,7 +4,7 @@ Thank you for considering a contribution to **ARTS** (*Agentic Repo Test System*
 
 ## Before you start
 
-- Read the [README](README.md) (limitations first), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and [docs/TARGET_REPO.md](docs/TARGET_REPO.md) (BYOR deps + seeds).
+- Read the [README](README.md) (limitations first), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/TARGET_REPO.md](docs/TARGET_REPO.md), and optional [docs/ROADMAP.md](docs/ROADMAP.md).
 - Quick path: [docs/QUICKSTART.md](docs/QUICKSTART.md).
 - Demos: [LinkedIn (~5 min)](https://www.linkedin.com/feed/update/urn:li:activity:7470499709799821313/) · [YouTube (~30 min)](https://www.youtube.com/watch?v=hKFgm7mVf7I).
 

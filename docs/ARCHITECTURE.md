@@ -51,9 +51,16 @@ Graph definition: `graph/builder.py`. Routing (risk gate, repair loop): `graph/r
 
 After `wait_for_task`, a random-forest model scores the **target file** (Python metrics via Radon). If **`risk_score < RISK_THRESHOLD`** (default `0.2`), the graph ends — no researcher, writer, or tests. Lower the threshold for experiments (`RISK_THRESHOLD=0.0` in `.env`).
 
-### Test repair loop
+### Test repair loop (self-healing)
 
-`executor` runs pytest on the generated test file. On failure, if **`attempts < MAX_TEST_ATTEMPTS`**, the graph routes back to **`writer`** with logs; otherwise it stops (may still save state depending on run outcome).
+On pytest failure:
+
+1. **`executor`** captures stdout/stderr and increments **`attempts`**.
+2. If **`attempts < MAX_TEST_ATTEMPTS`**, the graph routes to **`writer`** with logs; **`failure_analyzer`** picks a repair prompt.
+3. The writer may **`write_local_file`** (full file) or **`patch_test_code`** (SEARCH/REPLACE blocks via `utils/patch.py`) — repair prompts favor **surgical patches**.
+4. If max attempts is reached, the graph **stops** (no further writer loop).
+
+**Checkpoints** (`checkpoints.sqlite`) record graph state for **resume and inspection** (`get_state_history` in `main.py`). There is **no automatic rollback** to a prior checkpoint or git state when repairs fail; use version control on `REPO_PATH` for file-level recovery.
 
 ---
 
@@ -138,3 +145,5 @@ Today ARTS shares **one Python environment** with the target repo’s installed 
 - **Per-run sandbox** — clone `REPO_PATH`, `pip install` that repo’s dependencies in an **isolated venv or container**, run pytest with that interpreter, discard or quarantine the environment after the job.
 
 Document this expectation for operators; local OSS users install both ARTS and target deps manually ([TARGET_REPO](TARGET_REPO.md)).
+
+Community ideas (security plugin, sandbox executor, etc.): [ROADMAP.md](ROADMAP.md).
