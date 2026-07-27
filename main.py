@@ -324,7 +324,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--task",
         default=None,
-        help="Agent task prompt (default: USER_TASK env or built-in analysis_service request).",
+        help="Agent task prompt (default: USER_TASK env or demo task: analysis_service/analysis.py).",
     )
     args = parser.parse_args()
     repo_path = resolve_repo_path(args.repo_path)

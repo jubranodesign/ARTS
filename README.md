@@ -13,9 +13,13 @@
 
 This is a **research / course-style** project, not a hosted SaaS. Expect local CLI, Rich streaming output, and Chroma + SQLite on disk.
 
+**Demo scope:** The LinkedIn/YouTube walkthroughs use the default agent task  
+`Write unit tests for the file analysis_service/analysis.py`  
+(that path lives in **your** `REPO_PATH`, not in ARTS). Those runs were **smoke / happy-path** only — **complex scenarios were not systematically tested** (large repos, deep integration, exhaustive edge cases). Review generated tests before you rely on them.
+
 ## Bring your own repo (no bundled dataset)
 
-This project **does not ship a target codebase or pre-built vector index**. Each user points **`REPO_PATH`** at **their own** repository (any Python project you want tests for), runs **ingestion locally**, then runs the agent. Generated tests and pytest run **inside that repo**; Chroma data lives under `./data/vector_store` on your machine (gitignored).
+This project **does not ship a target codebase, golden test seeds, or pre-built vector index**. Each user points **`REPO_PATH`** at **their own** repository (any Python project you want tests for), adds **golden pytest examples** under `seed_data/` (see below), runs **ingestion locally**, then runs the agent. Generated tests and pytest run **inside that repo**; Chroma data lives under `./data/vector_store` on your machine (gitignored).
 
 **Ingest is required** before meaningful researcher retrieval — see step 3 below. `main.py` and `run_local.py` warn if the vector store is empty when you start an agent-only run.
 
@@ -26,8 +30,8 @@ For a one-page cheat sheet, see [docs/QUICKSTART.md](docs/QUICKSTART.md).
 ### 1. Clone and install
 
 ```bash
-git clone <your-repo-url>
-cd arts
+git clone https://github.com/jubranodesign/Agentic-Test-system.git
+cd Agentic-Test-system
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 # Linux/macOS: source .venv/bin/activate
@@ -46,6 +50,29 @@ Edit `.env`:
 - Copy from [`.env.example`](.env.example) any keys you are missing (merge; do not wipe existing secrets).
 - Set **`REPO_PATH`** to the repository you want to test (required).
 - Set **`MODEL_PROVIDER`** (default `mistral`) and the matching API key (e.g. `MISTRAL_API_KEY`).
+- Optionally set **`USER_TASK`** or pass `--task` (default matches the [demo task](#demo); see [Agent task](#agent-task-user_task)).
+
+#### Golden seed data (your examples)
+
+ARTS does **not** include reference tests for your target repo. Before **`ingest --both`**, add pytest files under **`seed_data/`** inside **`REPO_PATH`** (or set **`REPO_SEED_PATH`**).
+
+Golden seeds show the researcher **how your project writes tests**: imports, mocks, fixtures, naming, and patterns (HTTP, DB context managers, `caplog`, etc.). They are indexed separately from production source and retrieved via **`search_golden_tests_semantic`**.
+
+- Keep seeds **representative** of the style you want generated.
+- Cover the **kinds of complexity** you care about in target modules.
+- Re-run **`python ingest.py --repo-path "%REPO_PATH%" --both`** after changing seed files.
+
+Example layout in the repo under test:
+
+```text
+REPO_PATH/
+  seed_data/
+    test_example_patterns.py   # you provide — not shipped with ARTS
+  analysis_service/
+    analysis.py                  # example target from the demo task
+```
+
+Default seed path: `<REPO_PATH>/seed_data` (`shared/paths.get_repo_seed_path`). Override with **`REPO_SEED_PATH`** in `.env`.
 
 ### 3. Ingest vector store (**required** — first time or after repo changes)
 
@@ -54,6 +81,8 @@ Index **your** repo into the local vector store (not included in git):
 ```bash
 python ingest.py --repo-path "%REPO_PATH%" --both
 ```
+
+**`--both`** ingests **seed/golden tests first**, then full **source** (Chroma + BM25 on source).
 
 Or use `run_local.py` with `RUN = "both"` and `INGEST_MODE = "both"` (ingest + agent in one go).
 
@@ -67,7 +96,8 @@ How summaries, raw code, and BM25 relate: [Ingestion & retrieval storage](#inges
 
 ```bash
 python main.py --repo-path "%REPO_PATH%"
-# optional: --task "Write unit tests for analysis_service/analysis.py"
+# default demo task (override with --task):
+# --task "Write unit tests for the file analysis_service/analysis.py"
 ```
 
 **Local dev (edit flags in file):**
@@ -108,16 +138,39 @@ Ingestion uses a **dual-index** design: the same source chunks are stored differ
 
 After changing `REPO_PATH` or target code, re-run `python ingest.py --repo-path ... --both` so Chroma and BM25 stay in sync.
 
+### Agent task (`USER_TASK`)
+
+Resolution order: CLI **`--task`** → **`USER_TASK`** in `.env` → `DEFAULT_USER_TASK` in `shared/constants.py`.
+
+**Default (used in demos):**
+
+```text
+Write unit tests for the file analysis_service/analysis.py
+```
+
+Examples:
+
+```bash
+python main.py --repo-path "%REPO_PATH%" --task "Write unit tests for the file analysis_service/analysis.py"
+```
+
+```env
+USER_TASK=Write unit tests for the file analysis_service/analysis.py
+```
+
+Use paths **relative to `REPO_PATH`**. Offline eval datasets under `evaluation/` may mention other modules (e.g. for BYOR tuning) — that is **separate** from the demo task above.
+
 ## Configuration reference
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `REPO_PATH` | — | Target repo (required) |
+| `REPO_SEED_PATH` | `<REPO_PATH>/seed_data` | Golden pytest examples for ingest seed pass |
 | `MODEL_PROVIDER` | `mistral` | LLM backend for all agent nodes |
 | `RISK_THRESHOLD` | `0.2` | Min ML risk score to enter researcher path |
 | `MAX_TEST_ATTEMPTS` | `3` | Pytest failure → writer repair loops |
 | `LOG_LEVEL` | `INFO` | Python logging (`DEBUG` for dev) |
-| `USER_TASK` | built-in default | Task when CLI/`run_local` task unset |
+| `USER_TASK` | `Write unit tests for the file analysis_service/analysis.py` | Demo default; override for your file |
 
 ### LangGraph `configurable` (per run)
 
@@ -153,6 +206,10 @@ To proceed on “low risk” files during experiments, temporarily lower `RISK_T
 ## Limitations
 
 Read these before running on an important repository.
+
+### Demo validation scope
+
+Documented demos and the default **`USER_TASK`** above were **not** stress-tested on complicated cases (multi-service repos, async/concurrency, full error matrices, security-sensitive code). Treat output as a **starting point** for human review.
 
 ### Graph interrupt (`wait_for_task`)
 

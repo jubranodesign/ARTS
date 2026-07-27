@@ -4,16 +4,16 @@ Thank you for considering a contribution to **ARTS** (*Agentic Repo Test System*
 
 ## Before you start
 
-- Read the [README](README.md) (bring-your-own-repo, ingest, risk gate, limitations).
+- Read the [README](README.md) (bring-your-own-repo, **seed_data** golden tests, ingest, demo **USER_TASK**, limitations).
 - Quick path: [docs/QUICKSTART.md](docs/QUICKSTART.md).
 - Demos: [LinkedIn (~5 min)](https://www.linkedin.com/feed/update/urn:li:activity:7470499709799821313/) · [YouTube (~30 min)](https://www.youtube.com/watch?v=hKFgm7mVf7I).
 
 ## Local setup
 
-1. Clone the repo, create a venv, `pip install -e .`
-2. Copy [`.env.example`](.env.example) to `.env` — set `REPO_PATH` (your target repo) and API keys for `MODEL_PROVIDER`
-3. Ingest your repo: `python ingest.py --repo-path "%REPO_PATH%" --both`
-4. Run the agent: `python main.py --repo-path "%REPO_PATH%"` or edit and run `run_local.py`
+1. Clone `https://github.com/jubranodesign/Agentic-Test-system.git`, create a venv, `pip install -e .`
+2. Copy [`.env.example`](.env.example) to `.env` — set `REPO_PATH` (your target repo), add **`seed_data/`** in that repo, and API keys for `MODEL_PROVIDER`
+3. Ingest: `python ingest.py --repo-path "%REPO_PATH%" --both` (seed + source)
+4. Run the agent: `python main.py --repo-path "%REPO_PATH%"` (default demo task: `analysis_service/analysis.py`) or edit and run `run_local.py`
 
 Optional:
 
