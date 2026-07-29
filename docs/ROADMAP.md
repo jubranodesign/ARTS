@@ -14,7 +14,7 @@ See [README](../README.md), [ARCHITECTURE](ARCHITECTURE.md), and [TARGET_REPO](T
 | **Isolated test executor** | Per-run venv/container: clone `REPO_PATH`, `pip install`, run pytest, tear down |
 | **Checkpoint-aware repair** | Optional revert to last passing checkpoint (not in graph today) |
 | **CI smoke** | ingest + agent smoke on a fixture repo |
-| **Multi-language profiles** | Extend `REPO_LANGUAGE` beyond Python (scanner, prompts, test runner) |
+| **Multi-language profiles** | Extend `REPO_LANGUAGE` beyond splitter: scanner extensions, prompts, test runner (`ARTS_FULLY_SUPPORTED_LANGUAGES`) |
 
 ## Longer-term product ideas (community input)
 

@@ -98,7 +98,7 @@ Edit `.env`:
 - Set **`REPO_PATH`** to the repository you want to test (required).
 - Install **target repo libraries** in this environment (e.g. `pip install -r "%REPO_PATH%/requirements.txt"`) — see [docs/TARGET_REPO.md](docs/TARGET_REPO.md).
 - Set **`MODEL_PROVIDER`** (default `mistral`) and the matching API key (e.g. `MISTRAL_API_KEY`).
-- **`REPO_LANGUAGE`** defaults to **`python`**. Other values log a warning and behave as Python (multi-language repos are not implemented yet; see [Limitations](#python-only-target-repos-today)).
+- **`REPO_LANGUAGE`** defaults to **`python`**. Ingest **text splitting** accepts any id mapped to langchain **`Language`** (e.g. `js`, `ts`, `java` — see `SPLITTER_LANGUAGE_IDS` in `shared/repo_language.py`). The **rest of ARTS** (scanner, pytest, prompts) remains **python-only**; see [Limitations](#python-only-target-repos-today).
 - Optionally set **`USER_TASK`** or pass `--task` (default matches the [demo task](#demo); see [Agent task](#agent-task-user_task)).
 
 #### Golden seed data (your examples)
@@ -169,7 +169,7 @@ Ingestion uses a **dual-index** design: the same source chunks are stored differ
 ### Chroma (`data/vector_store/`)
 
 - Source and seed files are split into chunks, then **enriched with an LLM summary** (`services/code_processor.py`).
-- Chunk splitting uses **`REPO_LANGUAGE`** via `shared/repo_language.py` (effective language is **python** today).
+- Chunk splitting uses **`REPO_LANGUAGE`** → langchain **`Language`** via `shared/repo_language.py` (scanner still indexes **`.py`** only).
 - **Embeddings** are computed on **`page_content`** (the summary), not on raw syntax.
 - The **original chunk** is kept in **`metadata["source_code"]`** and is returned with semantic search (`VectorDBService.search_code`).
 
@@ -215,7 +215,7 @@ Use paths **relative to `REPO_PATH`**. Offline eval datasets under `evaluation/`
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `REPO_PATH` | — | Target repo (required) |
-| `REPO_LANGUAGE` | `python` | Ingest splitter / test runner hook; only **python** supported (others fall back with a warning) |
+| `REPO_LANGUAGE` | `python` | Ingest splitter: langchain `Language` ids; **full pipeline** still **python** only |
 | `REPO_SEED_PATH` | `<REPO_PATH>/seed_data` | Golden pytest examples for ingest seed pass |
 | `MODEL_PROVIDER` | `mistral` | LLM backend for all agent nodes |
 | `RISK_THRESHOLD` | `0.2` | Min ML risk score to enter researcher path |
@@ -264,7 +264,7 @@ Documented demos and the default **`USER_TASK`** above were **not** stress-teste
 
 ### Python-only target repos (today)
 
-ARTS is built around **Python** target repositories: `.py` scanning, **pytest** execution, Radon + ML **risk gate**, and agent prompts assume pytest/unittest.mock patterns. **`REPO_LANGUAGE`** is a forward-looking hook for ingest splitting and the test runner (`shared/repo_language.py`); only **`python`** is supported — any other value **falls back to python** with a log warning and does not enable another language yet.
+ARTS is built around **Python** target repositories: `.py` scanning, **pytest** execution, Radon + ML **risk gate**, and agent prompts assume pytest/unittest.mock patterns. **`REPO_LANGUAGE`** can select a **chunk splitter** (`Language` enum, e.g. `ts`, `java`) for ingest, but without `.py` scanning and pytest for other languages the **end-to-end workflow** remains **python-only** (`ARTS_FULLY_SUPPORTED_LANGUAGES` in `shared/repo_language.py`).
 
 ### Graph interrupt (`wait_for_task`)
 

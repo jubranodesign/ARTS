@@ -3,21 +3,27 @@ import logging
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT
 from shared.llm_factory import get_model
-from shared.repo_language import effective_repo_language, get_splitter_kwargs, resolve_repo_language
+from shared.repo_language import (
+    effective_repo_language,
+    effective_splitter_language_id,
+    get_splitter_kwargs,
+    resolve_repo_language,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class CodeProcessor:
     def __init__(self, provider: str = "groq", summary_prompt=CHUNK_SUMMARY_PROMPT):
-        lang = effective_repo_language()
+        requested = resolve_repo_language()
         self.splitter = RecursiveCharacterTextSplitter.from_language(
-            **get_splitter_kwargs(lang),
+            **get_splitter_kwargs(requested),
         )
         logger.info(
-            "CodeProcessor text splitter: effective_language=%s (REPO_LANGUAGE=%s)",
-            lang,
-            resolve_repo_language(),
+            "CodeProcessor splitter=%s REPO_LANGUAGE=%r pipeline_effective=%s",
+            effective_splitter_language_id(),
+            requested,
+            effective_repo_language(),
         )
         logger.info("CodeProcessor initializing LLM for ingestion using provider: %s", provider)
         self.llm = get_model(provider=provider, temperature=0)
