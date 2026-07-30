@@ -176,7 +176,7 @@ Ingestion uses a **dual-index** design: the same source chunks are stored differ
 ### BM25 (`data/bm25_index.pkl`)
 
 - Built only when ingesting **production source** (not seed-only runs).
-- Indexes **raw source text** from each chunk (`utils/retrieval.prepare_bm25_documents`), excluding test/seed files, with a **generic BM25 tokenizer** (`generic_code_tokenizer`; per-language tuning optional later).
+- Indexes **raw source text** from each chunk (`utils/retrieval.prepare_bm25_documents`), excluding test/seed files. BM25 tokenization follows **`REPO_LANGUAGE`** via `get_bm25_preprocess_func()` in `shared/repo_language.py`: **Python** splitter id → `python_code_tokenizer`; other known languages → `generic_code_tokenizer`.
 - Loaded by the researcher tool **`search_dependencies_bm25`** for dependency / symbol lookup.
 
 ### Researcher vs offline eval

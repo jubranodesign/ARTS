@@ -139,7 +139,10 @@ def get_seed_summary_prompt() -> str:
 
 
 def get_bm25_preprocess_func():
-    """BM25 preprocess for source ingest (generic default; python tokenizer optional later)."""
-    from utils.retrieval import generic_code_tokenizer
+    """BM25 preprocess keyed to REPO_LANGUAGE (via effective_splitter_language_id)."""
+    from utils.retrieval import generic_code_tokenizer, python_code_tokenizer
 
+    lang_id = effective_splitter_language_id()
+    if lang_id == DEFAULT_REPO_LANGUAGE:
+        return python_code_tokenizer
     return generic_code_tokenizer
