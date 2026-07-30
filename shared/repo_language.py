@@ -122,3 +122,24 @@ def get_splitter_kwargs(language: str | None = None) -> dict:
 
 # Back-compat name used in docs
 SUPPORTED_REPO_LANGUAGES = ARTS_FULLY_SUPPORTED_LANGUAGES
+
+
+def get_chunk_summary_prompt() -> str:
+    """Ingest prompt for production source chunks (generic until per-language overrides)."""
+    from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT
+
+    return CHUNK_SUMMARY_PROMPT
+
+
+def get_seed_summary_prompt() -> str:
+    """Ingest prompt for golden test seed chunks (generic until per-language overrides)."""
+    from shared.ingestion_prompts import SEED_SUMMARY_PROMPT
+
+    return SEED_SUMMARY_PROMPT
+
+
+def get_bm25_preprocess_func():
+    """BM25 preprocess for source ingest (generic default; python tokenizer optional later)."""
+    from utils.retrieval import generic_code_tokenizer
+
+    return generic_code_tokenizer

@@ -168,7 +168,7 @@ Ingestion uses a **dual-index** design: the same source chunks are stored differ
 
 ### Chroma (`data/vector_store/`)
 
-- Source and seed files are split into chunks, then **enriched with an LLM summary** (`services/code_processor.py`).
+- Source and seed files are split into chunks, then **enriched with an LLM summary** using **language-agnostic ingest prompts** (`shared/ingestion_prompts.py`, wired via `shared/repo_language.py`).
 - Chunk splitting uses **`REPO_LANGUAGE`** → langchain **`Language`** via `shared/repo_language.py` (scanner still indexes **`.py`** only).
 - **Embeddings** are computed on **`page_content`** (the summary), not on raw syntax.
 - The **original chunk** is kept in **`metadata["source_code"]`** and is returned with semantic search (`VectorDBService.search_code`).
@@ -176,7 +176,7 @@ Ingestion uses a **dual-index** design: the same source chunks are stored differ
 ### BM25 (`data/bm25_index.pkl`)
 
 - Built only when ingesting **production source** (not seed-only runs).
-- Indexes **raw Python text** from each chunk (`utils/retrieval.prepare_bm25_documents`), excluding test/seed files.
+- Indexes **raw source text** from each chunk (`utils/retrieval.prepare_bm25_documents`), excluding test/seed files, with a **generic BM25 tokenizer** (`generic_code_tokenizer`; per-language tuning optional later).
 - Loaded by the researcher tool **`search_dependencies_bm25`** for dependency / symbol lookup.
 
 ### Researcher vs offline eval

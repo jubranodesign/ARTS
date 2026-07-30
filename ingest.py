@@ -12,12 +12,12 @@ from services.document_factory import DocumentFactory
 from services.scanner import CodeScanner
 from services.vector_db_service import VectorDBService
 from shared.paths import DATA_DIR, VECTOR_STORE_PATH, get_repo_path, get_repo_seed_path
-from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT, SEED_SUMMARY_PROMPT
-from utils.retrieval import (
-    prepare_bm25_documents,
-    print_chunks_summary,
-    python_code_tokenizer,
+from shared.repo_language import (
+    get_bm25_preprocess_func,
+    get_chunk_summary_prompt,
+    get_seed_summary_prompt,
 )
+from utils.retrieval import prepare_bm25_documents, print_chunks_summary
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +34,13 @@ def resolve_ingest_target(repo_root: str, mode: IngestMode) -> tuple[str, bool]:
 
 
 def default_prompt_for_mode(mode: IngestMode) -> str:
-    return SEED_SUMMARY_PROMPT if mode == IngestMode.SEED else CHUNK_SUMMARY_PROMPT
+    return get_seed_summary_prompt() if mode == IngestMode.SEED else get_chunk_summary_prompt()
 
 
 def run_ingestion(
     vdb: VectorDBService,
     provider="mistral",
-    prompt=CHUNK_SUMMARY_PROMPT,
+    prompt=get_chunk_summary_prompt(),
     is_test=False,
     repo_path: str | None = None,
     processor=None,
@@ -77,7 +77,7 @@ def run_ingestion(
 
             dependency_retriever = BM25Retriever.from_documents(
                 bm25_documents,
-                preprocess_func=python_code_tokenizer,
+                preprocess_func=get_bm25_preprocess_func(),
             )
 
             bm25_index_path = os.path.join(DATA_DIR, "bm25_index.pkl")
