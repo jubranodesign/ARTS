@@ -1,4 +1,4 @@
-"""Repo language hooks: splitter via langchain Language; full pipeline python-only today."""
+"""Repo language hooks: ingest, paths, prompts, and BM25 keyed to REPO_LANGUAGE."""
 
 from __future__ import annotations
 
@@ -10,9 +10,6 @@ from langchain_text_splitters import Language
 logger = logging.getLogger(__name__)
 
 DEFAULT_REPO_LANGUAGE = "python"
-
-# End-to-end ARTS (scanner, pytest, prompts, risk gate) — not the same as splitter support.
-ARTS_FULLY_SUPPORTED_LANGUAGES: frozenset[str] = frozenset({DEFAULT_REPO_LANGUAGE})
 
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP = 150
@@ -36,6 +33,49 @@ _LANGUAGE_BY_NAME: dict[str, Language] = {lang.name.lower(): lang for lang in La
 SPLITTER_LANGUAGE_IDS: frozenset[str] = frozenset(_LANGUAGE_BY_NAME.keys()) | frozenset(
     _REPO_LANGUAGE_ALIASES.keys()
 )
+
+# File suffixes for ingest scanner, keyed by Language.name (lowercase).
+_EXTENSIONS_BY_LANGUAGE_ID: dict[str, frozenset[str]] = {
+    "c": frozenset({".c", ".h"}),
+    "cpp": frozenset({".cpp", ".cc", ".cxx", ".hpp", ".hh", ".h"}),
+    "csharp": frozenset({".cs"}),
+    "cobol": frozenset({".cob", ".cbl", ".cpy"}),
+    "elixir": frozenset({".ex", ".exs"}),
+    "go": frozenset({".go"}),
+    "haskell": frozenset({".hs", ".lhs"}),
+    "html": frozenset({".html", ".htm"}),
+    "java": frozenset({".java"}),
+    "js": frozenset({".js", ".mjs", ".cjs"}),
+    "kotlin": frozenset({".kt", ".kts"}),
+    "latex": frozenset({".tex", ".latex"}),
+    "lua": frozenset({".lua"}),
+    "markdown": frozenset({".md", ".markdown"}),
+    "perl": frozenset({".pl", ".pm"}),
+    "php": frozenset({".php"}),
+    "powershell": frozenset({".ps1", ".psm1", ".psd1"}),
+    "proto": frozenset({".proto"}),
+    "python": frozenset({".py"}),
+    "r": frozenset({".r", ".R"}),
+    "rst": frozenset({".rst"}),
+    "ruby": frozenset({".rb"}),
+    "rust": frozenset({".rs"}),
+    "scala": frozenset({".scala", ".sc"}),
+    "sol": frozenset({".sol"}),
+    "swift": frozenset({".swift"}),
+    "ts": frozenset({".ts", ".tsx"}),
+    "visualbasic6": frozenset({".bas", ".frm", ".cls", ".vb"}),
+}
+
+# Repo docs on source ingest (not used when REPO_LANGUAGE=markdown — already in map).
+_INGEST_SOURCE_DOC_EXTENSIONS: frozenset[str] = frozenset({".md"})
+
+for _lang in Language:
+    _lid = _lang.name.lower()
+    if _lid not in _EXTENSIONS_BY_LANGUAGE_ID:
+        logger.warning("No ingest file extensions mapped for Language.%s", _lang.name)
+
+# Pipeline + ingest for Language ids with extensions map; non-Python runs need ARTS_TEST_RUNNER or .arts/runner.py.
+ARTS_FULLY_SUPPORTED_LANGUAGES: frozenset[str] = frozenset(_EXTENSIONS_BY_LANGUAGE_ID.keys())
 
 
 def resolve_repo_language() -> str:
@@ -79,28 +119,94 @@ def effective_splitter_language_id() -> str:
 
 
 def effective_repo_language() -> str:
-    """Language used for test execution and pipeline defaults (python-only today)."""
-    requested = resolve_repo_language()
-    if requested in ARTS_FULLY_SUPPORTED_LANGUAGES or _normalize_language_id(
-        requested
-    ) in ARTS_FULLY_SUPPORTED_LANGUAGES:
-        return DEFAULT_REPO_LANGUAGE
+    """Language id for pipeline paths, prompts, and ingest (matches splitter id)."""
+    return effective_splitter_language_id()
 
-    if repo_language_to_splitter_language(requested) is not None:
-        logger.warning(
-            "REPO_LANGUAGE=%r: ingest splitter is supported, but the full ARTS "
-            "pipeline (scanner, pytest, prompts) still runs as %r.",
-            requested,
-            DEFAULT_REPO_LANGUAGE,
-        )
-        return DEFAULT_REPO_LANGUAGE
 
-    logger.warning(
-        "REPO_LANGUAGE=%r is not supported; using %r for ingest splitter and pipeline.",
-        requested,
-        DEFAULT_REPO_LANGUAGE,
+def is_python_pipeline() -> bool:
+    return effective_splitter_language_id() == DEFAULT_REPO_LANGUAGE
+
+
+def get_ingest_code_extensions() -> frozenset[str]:
+    """Source/seed code suffixes for REPO_LANGUAGE (excludes doc-only .md)."""
+    lang_id = effective_splitter_language_id()
+    return _EXTENSIONS_BY_LANGUAGE_ID.get(
+        lang_id, _EXTENSIONS_BY_LANGUAGE_ID[DEFAULT_REPO_LANGUAGE]
     )
-    return DEFAULT_REPO_LANGUAGE
+
+
+def unknown_target_file_placeholder() -> str:
+    ext = next(iter(get_ingest_code_extensions()), ".py")
+    return f"unknown_file{ext}"
+
+
+def resolve_test_framework() -> str:
+    """Display framework for prompts; override with ARTS_TEST_FRAMEWORK."""
+    raw = os.getenv("ARTS_TEST_FRAMEWORK")
+    if raw and str(raw).strip():
+        return str(raw).strip()
+    if is_python_pipeline():
+        return "pytest"
+    return "use the framework shown in golden seed examples"
+
+
+def get_writer_prompt_template() -> str:
+    if is_python_pipeline():
+        from agents.writer_agent.prompts import WRITER_PROMPT_TEMPLATE
+
+        return WRITER_PROMPT_TEMPLATE
+    from shared.agent_prompts import WRITER_PROMPT_GENERIC
+
+    return WRITER_PROMPT_GENERIC
+
+
+def get_repair_prompt_template() -> str:
+    if is_python_pipeline():
+        from agents.writer_agent.prompts import REPAIR_PROMPT_TEMPLATE
+
+        return REPAIR_PROMPT_TEMPLATE
+    from shared.agent_prompts import REPAIR_PROMPT_GENERIC
+
+    return REPAIR_PROMPT_GENERIC
+
+
+def get_designer_prompt_template() -> str:
+    if is_python_pipeline():
+        from agents.designer_agent.prompts import DESIGNER_PROMPT_TEMPLATE
+
+        return DESIGNER_PROMPT_TEMPLATE
+    from shared.agent_prompts import DESIGNER_PROMPT_GENERIC
+
+    return DESIGNER_PROMPT_GENERIC
+
+
+def get_reviewer_prompt_template() -> str:
+    if is_python_pipeline():
+        from agents.designer_agent.prompts import REVIEWER_PROMPT_TEMPLATE
+
+        return REVIEWER_PROMPT_TEMPLATE
+    from shared.agent_prompts import REVIEWER_PROMPT_GENERIC
+
+    return REVIEWER_PROMPT_GENERIC
+
+
+def get_architect_summary_prompt_template() -> str:
+    if is_python_pipeline():
+        from agents.researcher_agent.prompts import ARCHITECT_SUMMARY_PROMPT
+
+        return ARCHITECT_SUMMARY_PROMPT
+    from shared.agent_prompts import ARCHITECT_SUMMARY_PROMPT_GENERIC
+
+    return ARCHITECT_SUMMARY_PROMPT_GENERIC
+
+
+def writer_import_path_section(import_path: str) -> str:
+    if not import_path or not is_python_pipeline():
+        return ""
+    return (
+        f"\n5. **TARGET IMPORT**: Use absolute import path for code under test: "
+        f"`from {import_path} import ...`.\n"
+    )
 
 
 def get_splitter_kwargs(language: str | None = None) -> dict:
@@ -146,3 +252,14 @@ def get_bm25_preprocess_func():
     if lang_id == DEFAULT_REPO_LANGUAGE:
         return python_code_tokenizer
     return generic_code_tokenizer
+
+
+def get_ingest_allowed_extensions(*, is_test: bool = False) -> set[str]:
+    """
+    Scanner suffixes for ingest, aligned with REPO_LANGUAGE splitter id.
+    Seed uses the same code extensions as source; source may also include .md docs.
+    """
+    allowed = set(get_ingest_code_extensions())
+    if not is_test and effective_splitter_language_id() != "markdown":
+        allowed |= _INGEST_SOURCE_DOC_EXTENSIONS
+    return allowed

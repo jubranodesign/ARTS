@@ -15,6 +15,7 @@ from shared.paths import DATA_DIR, VECTOR_STORE_PATH, get_repo_path, get_repo_se
 from shared.repo_language import (
     get_bm25_preprocess_func,
     get_chunk_summary_prompt,
+    get_ingest_allowed_extensions,
     get_seed_summary_prompt,
 )
 from utils.retrieval import prepare_bm25_documents, print_chunks_summary
@@ -53,7 +54,9 @@ def run_ingestion(
         "Test/Seed" if is_test else "Source Code",
     )
 
-    scanner = CodeScanner()
+    allowed = get_ingest_allowed_extensions(is_test=is_test)
+    logger.info("Ingest scanner extensions: %s", sorted(allowed))
+    scanner = CodeScanner(allowed_extensions=allowed)
     factory = DocumentFactory()
     proc = processor or CodeProcessor(provider=provider, summary_prompt=prompt)
 

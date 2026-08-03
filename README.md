@@ -98,12 +98,12 @@ Edit `.env`:
 - Set **`REPO_PATH`** to the repository you want to test (required).
 - Install **target repo libraries** in this environment (e.g. `pip install -r "%REPO_PATH%/requirements.txt"`) — see [docs/TARGET_REPO.md](docs/TARGET_REPO.md).
 - Set **`MODEL_PROVIDER`** (default `mistral`) and the matching API key (e.g. `MISTRAL_API_KEY`).
-- **`REPO_LANGUAGE`** defaults to **`python`**. Ingest **text splitting** accepts any id mapped to langchain **`Language`** (e.g. `js`, `ts`, `java` — see `SPLITTER_LANGUAGE_IDS` in `shared/repo_language.py`). The **rest of ARTS** (scanner, pytest, prompts) remains **python-only**; see [Limitations](#python-only-target-repos-today).
+- **`REPO_LANGUAGE`** defaults to **`python`**. Ingest and the agent graph (paths, prompts) follow langchain **`Language`** ids (see `shared/repo_language.py`). **Python** uses built-in **pytest**; other languages require **`ARTS_TEST_RUNNER`** or `<REPO_PATH>/.arts/runner.py` — see [BYOR test runner](#byor-test-runner).
 - Optionally set **`USER_TASK`** or pass `--task` (default matches the [demo task](#demo); see [Agent task](#agent-task-user_task)).
 
 #### Golden seed data (your examples)
 
-ARTS does **not** include reference tests for your target repo. Before **`ingest --both`**, add pytest files under **`seed_data/`** inside **`REPO_PATH`** (or set **`REPO_SEED_PATH`**).
+ARTS does **not** include reference tests for your target repo. Before **`ingest --both`**, add golden test files under **`seed_data/`** (or **`REPO_SEED_PATH`**) using the **same file extensions** as your `REPO_LANGUAGE` source (e.g. `.py`, `.ts`, `.java`).
 
 Golden seeds show the researcher **how your project writes tests**: imports, mocks, fixtures, naming, and patterns (HTTP, DB context managers, `caplog`, etc.). They are indexed separately from production source and retrieved via **`search_golden_tests_semantic`**.
 
@@ -169,7 +169,7 @@ Ingestion uses a **dual-index** design: the same source chunks are stored differ
 ### Chroma (`data/vector_store/`)
 
 - Source and seed files are split into chunks, then **enriched with an LLM summary** using **language-agnostic ingest prompts** (`shared/ingestion_prompts.py`, wired via `shared/repo_language.py`).
-- Chunk splitting uses **`REPO_LANGUAGE`** → langchain **`Language`** via `shared/repo_language.py` (scanner still indexes **`.py`** only).
+- Chunk splitting and **file scanning** use **`REPO_LANGUAGE`** and matching suffixes via `get_ingest_allowed_extensions()` (**seed and source** share code extensions; source may also include `.md`).
 - **Embeddings** are computed on **`page_content`** (the summary), not on raw syntax.
 - The **original chunk** is kept in **`metadata["source_code"]`** and is returned with semantic search (`VectorDBService.search_code`).
 
@@ -215,11 +215,14 @@ Use paths **relative to `REPO_PATH`**. Offline eval datasets under `evaluation/`
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `REPO_PATH` | — | Target repo (required) |
-| `REPO_LANGUAGE` | `python` | Ingest splitter: langchain `Language` ids; **full pipeline** still **python** only |
-| `REPO_SEED_PATH` | `<REPO_PATH>/seed_data` | Golden pytest examples for ingest seed pass |
+| `REPO_LANGUAGE` | `python` | Langchain `Language` id: ingest, paths, agent prompts |
+| `ARTS_TEST_RUNNER` | — | Optional `module:callable` for non-default test execution |
+| `ARTS_METRICS_EXTRACTOR` | — | Optional `module:callable` for ML risk metrics (non-Python / custom) |
+| `ARTS_TEST_FRAMEWORK` | — | Optional label in agent prompts (e.g. `jest`, `JUnit`) |
+| `REPO_SEED_PATH` | `<REPO_PATH>/seed_data` | Golden tests for ingest (extensions match `REPO_LANGUAGE`) |
 | `MODEL_PROVIDER` | `mistral` | LLM backend for all agent nodes |
 | `RISK_THRESHOLD` | `0.2` | Min ML risk score to enter researcher path |
-| `MAX_TEST_ATTEMPTS` | `3` | Pytest failure → writer repair loops |
+| `MAX_TEST_ATTEMPTS` | `3` | Test failure → writer repair loops |
 | `LOG_LEVEL` | `INFO` | Python logging (`DEBUG` for dev) |
 | `USER_TASK` | `Write unit tests for the file analysis_service/analysis.py` | Demo default; override for your file |
 
@@ -247,12 +250,25 @@ Single source for merge/validation: `shared/graph_config.py`. Defaults for provi
 
 ## Risk gate
 
-After `wait_for_task`, a random-forest risk score is computed on the target file.
+After `wait_for_task`, a random-forest risk score is computed on the target file using **JM1-aligned static metrics** (see `ml_predictor/` — trained on NASA JM1 features, computed at runtime via **Radon** for Python or your **BYOR extractor**).
 
 - If **`risk_score >= RISK_THRESHOLD`** (default **0.2**): flow continues to **researcher** → designer → writer → executor.
 - If **`risk_score < RISK_THRESHOLD`**: the graph routes to **END**. You will **not** get tests or writer output — only the early risk step runs (plus stream setup). This is intentional (high-recall gate from the ML notebook), not a crash.
 
 To proceed on “low risk” files during experiments, temporarily lower `RISK_THRESHOLD` in `.env` (e.g. `0.0`) or point `USER_TASK` at a file the model scores higher.
+
+**Python (default):** metrics from Radon (`extract_code_metrics_radon` in `ml_predictor/utils.py`).
+
+**Other languages:** provide metrics that return the same columns: `loc`, `v(g)`, `v`, `d`, `e`, `complexity_density`, `volume_per_line` — via **`ARTS_METRICS_EXTRACTOR`** or **`<REPO_PATH>/.arts/metrics.py`**. If extraction fails, risk defaults to **1.0** (researcher path). Template: [`docs/examples/arts_metrics.py`](docs/examples/arts_metrics.py).
+
+## BYOR test runner
+
+Python repos use **pytest** by default (`utils/testing.run_pytest`). Other languages (or custom Python flows) need a **bring-your-own runner**:
+
+1. **`ARTS_TEST_RUNNER=package.module:run_tests`** — callable on `PYTHONPATH` (add `REPO_PATH` or install your package).
+2. **`<REPO_PATH>/.arts/runner.py`** — define `run_tests(full_test_path, repo_path, env=None, timeout=60) -> (status, logs)`.
+
+Example template: [`docs/examples/arts_runner.py`](docs/examples/arts_runner.py). You install repo dependencies and implement the command (Jest, `mvn test`, etc.) inside the runner.
 
 ## Limitations
 
@@ -262,9 +278,11 @@ Read these before running on an important repository.
 
 Documented demos and the default **`USER_TASK`** above were **not** stress-tested on complicated cases (multi-service repos, async/concurrency, full error matrices, security-sensitive code). Treat output as a **starting point** for human review.
 
-### Python-only target repos (today)
+### Multi-language BYOR
 
-ARTS is built around **Python** target repositories: `.py` scanning, **pytest** execution, Radon + ML **risk gate**, and agent prompts assume pytest/unittest.mock patterns. **`REPO_LANGUAGE`** can select a **chunk splitter** (`Language` enum, e.g. `ts`, `java`) for ingest, but without `.py` scanning and pytest for other languages the **end-to-end workflow** remains **python-only** (`ARTS_FULLY_SUPPORTED_LANGUAGES` in `shared/repo_language.py`).
+**`REPO_LANGUAGE`** drives ingest, task path parsing, test output paths, and generic agent prompts. **Mono-repo / mono-language** is assumed (one splitter id for all indexed files). **Polyglot** repos (mixed languages under one `REPO_LANGUAGE`) are not supported. The ML **risk gate** uses Radon on **Python** by default; other languages need a **BYOR metrics extractor** (same JM1 feature columns) for calibrated scores — otherwise risk falls back to **1.0**.
+
+Repair-loop hints (`failure_analyzer`) and logging rules remain **Python-oriented**; quality on non-Python repos depends on golden seeds and your runner logs.
 
 ### Graph interrupt (`wait_for_task`)
 
@@ -278,9 +296,9 @@ Semantic/BM25 tools expect a populated Chroma store under `data/vector_store` an
 
 `wait_for_task` imports `ml_predictor` and loads the sklearn model when that node module loads. First run can be slower; the model file must be present in the project layout expected by `ml_predictor.utils`.
 
-### Writes and pytest under `REPO_PATH`
+### Writes and test execution under `REPO_PATH`
 
-The writer uses tools to **read and write files under `REPO_PATH`**, typically under `tests/…`. The executor runs **`pytest`** on those paths with `cwd=REPO_PATH` using the **same Python interpreter as ARTS** — your repo’s packages must be installed there ([docs/TARGET_REPO.md](docs/TARGET_REPO.md)). Use a disposable clone or branch — not production code without review.
+The writer uses tools to **read and write files under `REPO_PATH`**, typically under `tests/…`. The executor runs tests via **pytest** (Python default) or your **BYOR runner** with `cwd=REPO_PATH`. Install target-repo dependencies in the same environment ([docs/TARGET_REPO.md](docs/TARGET_REPO.md)). Use a disposable clone or branch.
 
 ### Checkpoint SQLite
 
