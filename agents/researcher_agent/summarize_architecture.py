@@ -22,7 +22,7 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
     צומת המסכם: שומר על ה-RESEARCH_DATA_DUMP המקורי מהחוקר, ומחלץ
     דוגמת זהב (Golden Example) של טסטים באמצעות LLM רק אם קיימים כאלו.
     """
-    llm = setup_node_llm(config)
+    llm = setup_node_llm(config, node_id="summarizer")
 
     all_messages = state.get("messages", [])
     user_task = state.get("user_input", "No specific task defined.")

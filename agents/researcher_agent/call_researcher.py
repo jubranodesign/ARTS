@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def call_researcher(state: AgentState, config: RunnableConfig):
 
-    llm = setup_node_llm(config, RESEARCHER_TOOLS)
+    llm = setup_node_llm(config, RESEARCHER_TOOLS, node_id="researcher")
 
     # 1. שליפת נתונים - אנחנו סומכים על ה-main שהזין HumanMessage
     current_summary = state.get("architecture_summary", "No summary available yet.")

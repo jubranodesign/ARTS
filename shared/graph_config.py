@@ -13,6 +13,7 @@ GRAPH_CONFIG_OVERRIDE_KEYS: frozenset[str] = frozenset(
     {
         "thread_id",
         "model_provider",
+        "model_providers",
     }
 )
 
@@ -32,11 +33,12 @@ GRAPH_CONFIG_ALL_KEYS: frozenset[str] = (
 DEFAULT_THREAD_ID = "test_session_001"
 
 
-class GraphConfigurable(TypedDict):
+class GraphConfigurable(TypedDict, total=False):
     """Runtime dict passed to LangGraph nodes and tools."""
 
     thread_id: str
     model_provider: str
+    model_providers: dict[str, str]
     repo_path: str
     vdb: VectorDBService
     processor: CodeProcessor
@@ -53,6 +55,9 @@ def _validate_graph_configurable(merged: dict) -> None:
         raise ValueError("configurable['repo_path'] must be a non-empty string")
     if not isinstance(merged["thread_id"], str) or not str(merged["thread_id"]).strip():
         raise ValueError("configurable['thread_id'] must be a non-empty string")
+    mp = merged.get("model_providers")
+    if mp is not None and not isinstance(mp, dict):
+        raise ValueError("configurable['model_providers'] must be a dict of node_id -> provider")
 
 
 def merge_graph_configurable(
@@ -71,6 +76,7 @@ def merge_graph_configurable(
     merged: dict = {
         "thread_id": DEFAULT_THREAD_ID,
         "model_provider": get_default_model_provider(),
+        "model_providers": {},
     }
 
     if overrides:
@@ -82,7 +88,9 @@ def merge_graph_configurable(
                 "Policy settings use env (RISK_THRESHOLD, MAX_TEST_ATTEMPTS, MODEL_PROVIDER). "
                 "repo_path / vdb / processor are set by run_* entrypoints, not GRAPH_CONFIG."
             )
-        merged.update({k: overrides[k] for k in GRAPH_CONFIG_OVERRIDE_KEYS if k in overrides})
+        for key in GRAPH_CONFIG_OVERRIDE_KEYS:
+            if key in overrides:
+                merged[key] = overrides[key]
 
     merged["repo_path"] = repo_path
     merged["vdb"] = vdb

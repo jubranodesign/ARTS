@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def call_designer(state: AgentState, config: RunnableConfig):
     # 1. הגדרת ה-LLM (לפי ההמלצה: Qwen-2.5-32b או Gemini)
-    llm = setup_node_llm(config, AGENT_TOOLS)
+    llm = setup_node_llm(config, AGENT_TOOLS, node_id="designer")
 
     # 2. שליפת נתונים בסיסיים מה-State
     architecture_summary = state.get("architecture_summary", "No summary available")

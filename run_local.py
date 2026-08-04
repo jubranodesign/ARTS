@@ -17,7 +17,7 @@ RUN = "ingest"  # "ingest" | "agent" | "both"
 INGEST_MODE = "both"  # "both" | "seed" | "source" — used when RUN is "ingest" or "both"
 REPO_PATH = None  # None → REPO_PATH from .env via get_repo_path()
 USER_TASK = None  # None → USER_TASK env or DEFAULT_USER_TASK in shared/constants.py
-GRAPH_CONFIG: dict | None = None  # optional: thread_id, model_provider — see shared/graph_config.py
+GRAPH_CONFIG: dict | None = None  # optional: thread_id, model_provider, model_providers — see shared/graph_config.py
 
 from shared.paths import get_repo_path
 from shared.startup_checks import validate_runtime_startup
@@ -27,7 +27,7 @@ from main import create_vector_db, run_agent_only, run_ingest_only, run_pipeline
 def main() -> None:
     repo_path = REPO_PATH or get_repo_path()
     warn_empty_vdb = RUN == "agent"
-    validate_runtime_startup(repo_path, warn_empty_vdb=warn_empty_vdb)
+    validate_runtime_startup(repo_path, warn_empty_vdb=warn_empty_vdb, graph_overrides=GRAPH_CONFIG)
     vdb = create_vector_db()
 
     if RUN == "ingest":

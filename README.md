@@ -220,7 +220,8 @@ Use paths **relative to `REPO_PATH`**. Offline eval datasets under `evaluation/`
 | `ARTS_METRICS_EXTRACTOR` | — | Optional `module:callable` for ML risk metrics (non-Python / custom) |
 | `ARTS_TEST_FRAMEWORK` | — | Optional label in agent prompts (e.g. `jest`, `JUnit`) |
 | `REPO_SEED_PATH` | `<REPO_PATH>/seed_data` | Golden tests for ingest (extensions match `REPO_LANGUAGE`) |
-| `MODEL_PROVIDER` | `mistral` | LLM backend for all agent nodes |
+| `MODEL_PROVIDER` | `mistral` | Default LLM provider for graph nodes |
+| `*_MODEL_PROVIDER` | — | Optional per node: `RESEARCHER_`, `SUMMARIZER_`, `DESIGNER_`, `REVIEWER_`, `WRITER_` |
 | `RISK_THRESHOLD` | `0.2` | Min ML risk score to enter researcher path |
 | `MAX_TEST_ATTEMPTS` | `3` | Test failure → writer repair loops |
 | `LOG_LEVEL` | `INFO` | Python logging (`DEBUG` for dev) |
@@ -233,16 +234,19 @@ Built by `shared/graph_config.build_langgraph_run_config`. **Not** the same as `
 | Key | Required | Set via | Used by |
 |-----|----------|---------|---------|
 | `thread_id` | yes | default / `GRAPH_CONFIG` | SQLite checkpointer |
-| `model_provider` | yes | `MODEL_PROVIDER` env / `GRAPH_CONFIG` | all LLM nodes (`setup_node_llm`) |
+| `model_provider` | yes | `MODEL_PROVIDER` env / `GRAPH_CONFIG` | default for all LLM nodes |
+| `model_providers` | no | `GRAPH_CONFIG` only | per-node map, e.g. `{"writer": "mistral", "researcher": "groq"}` |
 | `repo_path` | yes | `run_*` args (`REPO_PATH`) | wait_for_task, tools, writer, executor |
 | `vdb` | yes | `run_*` args | researcher tools, save_test |
 | `processor` | yes | `run_*` args | save_test |
 
-**`GRAPH_CONFIG` / `configurable=`** may only override: `thread_id`, `model_provider`. Unknown keys raise `ValueError`.
+**`GRAPH_CONFIG` / `configurable=`** may override: `thread_id`, `model_provider`, `model_providers`. Unknown keys raise `ValueError`.
+
+Per-agent resolution: `model_providers[node_id]` → `{NODE}_MODEL_PROVIDER` env → `model_provider` → `MODEL_PROVIDER`. See `shared/agent_llm_policy.py`.
+
+Example: `GRAPH_CONFIG = {"model_provider": "groq", "model_providers": {"writer": "mistral"}, "thread_id": "dev-1"}` in `run_local.py`.
 
 **Env-only policy** (not in `configurable`): `RISK_THRESHOLD`, `MAX_TEST_ATTEMPTS` — see `shared/run_policy.py`.
-
-Example: `GRAPH_CONFIG = {"model_provider": "groq", "thread_id": "dev-1"}` in `run_local.py`.
 
 Single source for merge/validation: `shared/graph_config.py`. Defaults for provider/thread: `shared/run_policy.py` + `DEFAULT_THREAD_ID` in graph_config.
 

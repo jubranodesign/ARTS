@@ -22,7 +22,7 @@ def call_writer(state: AgentState, config: RunnableConfig):
     if post_tool_update is not None:
         return post_tool_update
 
-    llm = setup_node_llm(config, AGENT_TOOLS + WRITER_TOOLS)
+    llm = setup_node_llm(config, AGENT_TOOLS + WRITER_TOOLS, node_id="writer")
     ctx = build_writer_context(state, config)
 
     if state.get("test_run_status") == "failed":

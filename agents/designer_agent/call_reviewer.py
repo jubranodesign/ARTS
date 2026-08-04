@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def call_reviewer(state, config):
     # 1. הגדרת המודל (לפי ההמלצה: Llama-3.3-70b-versatile לביקורתיות מקסימלית)
-    llm = setup_node_llm(config, AGENT_TOOLS)
+    llm = setup_node_llm(config, AGENT_TOOLS, node_id="reviewer")
     
     # 2. שליפת נתונים מה-State
     target_file = state.get("target_file")
