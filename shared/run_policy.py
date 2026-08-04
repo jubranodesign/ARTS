@@ -14,6 +14,14 @@ def get_default_model_provider() -> str:
     return _DEFAULT_MODEL_PROVIDER
 
 
+def get_ingest_model_provider() -> str:
+    """LLM provider for ingest chunk summaries (CodeProcessor). Falls back to MODEL_PROVIDER."""
+    raw = os.getenv("INGEST_MODEL_PROVIDER")
+    if raw and str(raw).strip():
+        return str(raw).strip().lower()
+    return get_default_model_provider()
+
+
 def get_risk_threshold() -> float:
     raw = os.getenv("RISK_THRESHOLD")
     if raw is None or not str(raw).strip():

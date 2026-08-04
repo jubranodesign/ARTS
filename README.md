@@ -221,6 +221,7 @@ Use paths **relative to `REPO_PATH`**. Offline eval datasets under `evaluation/`
 | `ARTS_TEST_FRAMEWORK` | — | Optional label in agent prompts (e.g. `jest`, `JUnit`) |
 | `REPO_SEED_PATH` | `<REPO_PATH>/seed_data` | Golden tests for ingest (extensions match `REPO_LANGUAGE`) |
 | `MODEL_PROVIDER` | `mistral` | Default LLM provider for graph nodes |
+| `INGEST_MODEL_PROVIDER` | — | Ingest summaries (`CodeProcessor`); defaults to `MODEL_PROVIDER` |
 | `*_MODEL_PROVIDER` | — | Optional per node: `RESEARCHER_`, `SUMMARIZER_`, `DESIGNER_`, `REVIEWER_`, `WRITER_` |
 | `RISK_THRESHOLD` | `0.2` | Min ML risk score to enter researcher path |
 | `MAX_TEST_ATTEMPTS` | `3` | Test failure → writer repair loops |

@@ -84,6 +84,7 @@ def validate_runtime_startup(
 ) -> None:
     """Fail fast on missing repo or LLM keys; optional warning for empty Chroma."""
     from shared.agent_llm_policy import resolved_graph_model_providers
+    from shared.run_policy import get_ingest_model_provider
 
     check_repo_path_exists(repo_path)
     # Approximate configurable overrides for provider resolution (no vdb/processor needed).
@@ -96,7 +97,9 @@ def validate_runtime_startup(
             cfg["model_provider"] = graph_overrides["model_provider"]
         if "model_providers" in graph_overrides:
             cfg["model_providers"] = graph_overrides["model_providers"]
-    for provider in resolved_graph_model_providers(cfg):
+    providers = resolved_graph_model_providers(cfg)
+    providers.add(get_ingest_model_provider())
+    for provider in providers:
         check_llm_provider_configured(provider)
     if warn_empty_vdb:
         warn_if_vector_store_empty()

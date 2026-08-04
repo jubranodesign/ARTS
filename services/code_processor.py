@@ -9,14 +9,17 @@ from shared.repo_language import (
     get_splitter_kwargs,
     resolve_repo_language,
 )
+from shared.run_policy import get_ingest_model_provider
 
 logger = logging.getLogger(__name__)
 
 
 class CodeProcessor:
-    def __init__(self, provider: str = "groq", summary_prompt=None):
+    def __init__(self, provider: str | None = None, summary_prompt=None):
         if summary_prompt is None:
             summary_prompt = get_chunk_summary_prompt()
+        if provider is None:
+            provider = get_ingest_model_provider()
         requested = resolve_repo_language()
         self.splitter = RecursiveCharacterTextSplitter.from_language(
             **get_splitter_kwargs(requested),

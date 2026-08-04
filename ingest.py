@@ -18,6 +18,7 @@ from shared.repo_language import (
     get_ingest_allowed_extensions,
     get_seed_summary_prompt,
 )
+from shared.run_policy import get_ingest_model_provider
 from utils.retrieval import prepare_bm25_documents, print_chunks_summary
 
 logger = logging.getLogger(__name__)
@@ -40,12 +41,14 @@ def default_prompt_for_mode(mode: IngestMode) -> str:
 
 def run_ingestion(
     vdb: VectorDBService,
-    provider="mistral",
+    provider=None,
     prompt=get_chunk_summary_prompt(),
     is_test=False,
     repo_path: str | None = None,
     processor=None,
 ):
+    if provider is None:
+        provider = get_ingest_model_provider()
     logger.info("Ingestion script started")
     resolved_repo = repo_path or get_repo_path()
     logger.info(
@@ -108,10 +111,12 @@ def run_ingestion_for_repo(
     vdb: VectorDBService,
     mode: IngestMode = IngestMode.SEED,
     repo_root: str | None = None,
-    provider: str = "mistral",
+    provider: str | None = None,
     processor: CodeProcessor | None = None,
 ) -> None:
     """Run ingestion for seed_data or full source tree under repo_root."""
+    if provider is None:
+        provider = get_ingest_model_provider()
     root = repo_root or get_repo_path()
     ingest_path, is_test = resolve_ingest_target(root, mode)
     prompt = default_prompt_for_mode(mode)
@@ -129,9 +134,11 @@ def run_ingestion_for_repo(
 def run_both_ingestion(
     vdb: VectorDBService,
     repo_root: str | None = None,
-    provider: str = "mistral",
+    provider: str | None = None,
 ) -> None:
     """Seed/golden tests first, then full source (Chroma + BM25)."""
+    if provider is None:
+        provider = get_ingest_model_provider()
     run_ingestion_for_repo(vdb, IngestMode.SEED, repo_root=repo_root, provider=provider)
     run_ingestion_for_repo(vdb, IngestMode.SOURCE, repo_root=repo_root, provider=provider)
 
