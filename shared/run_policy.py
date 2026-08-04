@@ -33,3 +33,19 @@ def get_max_test_attempts() -> int:
         return max(1, value)
     except ValueError:
         return _DEFAULT_MAX_TEST_ATTEMPTS
+
+
+def get_test_runner_entrypoint() -> str | None:
+    """ARTS_TEST_RUNNER=package.module:run_tests — optional BYOR test execution."""
+    raw = os.getenv("ARTS_TEST_RUNNER")
+    if raw and str(raw).strip():
+        return str(raw).strip()
+    return None
+
+
+def get_metrics_extractor_entrypoint() -> str | None:
+    """ARTS_METRICS_EXTRACTOR=package.module:extract_metrics — optional BYOR risk metrics."""
+    raw = os.getenv("ARTS_METRICS_EXTRACTOR")
+    if raw and str(raw).strip():
+        return str(raw).strip()
+    return None

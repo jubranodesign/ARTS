@@ -2,7 +2,7 @@ import logging
 
 from langchain_core.messages import AIMessage, SystemMessage
 
-from agents.designer_agent.prompts import REVIEWER_PROMPT_TEMPLATE
+from shared.repo_language import get_reviewer_prompt_template
 from agents.shared.agent_tools import AGENT_TOOLS
 from shared.config import setup_node_llm
 from shared.logging_rules import SHARED_LOGGING_RULES
@@ -22,7 +22,7 @@ def call_reviewer(state, config):
     golden_test_summary = state.get("golden_test_summary", "No golden test summary available")
 
     # 3. הכנת הפרומפט (הזרקת המשתנים ל-System)
-    system_content = REVIEWER_PROMPT_TEMPLATE.format(
+    system_content = get_reviewer_prompt_template().format(
         architecture_summary=architecture_summary,
         golden_examples=golden_test_summary,
         logging_rules=SHARED_LOGGING_RULES

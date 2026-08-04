@@ -5,6 +5,12 @@ import tokenize
 
 logger = logging.getLogger(__name__)
 
+
+def generic_code_tokenizer(text: str) -> list[str]:
+    """Language-agnostic BM25 tokenization (lowercase word/identifier tokens)."""
+    return re.findall(r"\b[\w$]+\b", text.lower())
+
+
 def python_code_tokenizer(text: str) -> list[str]:
     tokens = []
     try:

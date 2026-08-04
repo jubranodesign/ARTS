@@ -7,14 +7,16 @@ ARTS **does not ship** your application code, golden tests, or third-party libra
 | Item | Location | Purpose |
 |------|----------|---------|
 | Application source | Your repo tree | Ingest + research |
-| Golden pytest examples | `<REPO_PATH>/seed_data/` (or `REPO_SEED_PATH`) | `search_golden_tests_semantic` patterns |
-| **Runtime dependencies** | `requirements.txt`, `pyproject.toml`, etc. | Imports must resolve when pytest runs |
+| Golden test examples | `<REPO_PATH>/seed_data/` (or `REPO_SEED_PATH`) | `search_golden_tests_semantic` patterns |
+| **Runtime dependencies** | `requirements.txt`, `package.json`, etc. | Must resolve when **your test runner** executes |
+| **Test runner** (non-Python or custom) | `ARTS_TEST_RUNNER` or `<REPO_PATH>/.arts/runner.py` | See README § BYOR test runner |
+| **Risk metrics** (non-Python or custom) | `ARTS_METRICS_EXTRACTOR` or `<REPO_PATH>/.arts/metrics.py` | JM1 columns for ML gate — see README § Risk gate |
 
 ARTS installs **only its own** dependencies (`pip install -e .` in the ARTS clone). It does **not** run `pip install` on `REPO_PATH` for you.
 
-## Python packages for pytest
+## Python packages for pytest (default)
 
-The executor runs:
+When `REPO_LANGUAGE=python` and no custom runner is set, the executor runs:
 
 ```text
 sys.executable -m pytest <test_file>
@@ -44,7 +46,7 @@ If pytest fails with **`ModuleNotFoundError`**, install the missing package from
 
 Before `python ingest.py --repo-path "%REPO_PATH%" --both`:
 
-- Add pytest files under **`seed_data/`** that reflect **how you want tests written** (mocks, fixtures, style).
+- Add test files under **`seed_data/`** with extensions matching **`REPO_LANGUAGE`** (e.g. `.py`, `.ts`).
 - Seeds are indexed separately from production source; the researcher retrieves them semantically.
 
 See README § Golden seed data.
@@ -59,5 +61,5 @@ See README § Golden seed data.
 
 - [ ] `REPO_PATH` points at the repo you want to test
 - [ ] `seed_data/` populated and **`ingest --both`** completed
-- [ ] Target repo **dependencies installed** in the ARTS Python environment
-- [ ] Read README **[Limitations](../README.md#limitations)** (risk gate, Python-only, demo scope)
+- [ ] Target repo **dependencies installed** (and runner configured if not Python/pytest)
+- [ ] Read README **[Limitations](../README.md#limitations)** (risk gate, BYOR scope, demo)

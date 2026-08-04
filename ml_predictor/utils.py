@@ -11,6 +11,17 @@ from tabulate import tabulate
 
 logger = logging.getLogger(__name__)
 
+# Columns expected by bug_prediction_model.pkl / scaler.pkl (train.py / Radon path)
+RISK_FEATURE_COLUMNS = [
+    "loc",
+    "v(g)",
+    "v",
+    "d",
+    "e",
+    "complexity_density",
+    "volume_per_line",
+]
+
 # משתנים גלובליים לטעינה חד-פעמית
 _model = None
 _scaler = None
@@ -37,11 +48,24 @@ def load_ml_assets():
     return _model, _scaler
 
 
-def extract_code_metrics(code_string):
+def _normalize_metrics_dataframe(df: pd.DataFrame) -> pd.DataFrame | None:
+    if df is None or df.empty:
+        return None
+    missing = [c for c in RISK_FEATURE_COLUMNS if c not in df.columns]
+    if missing:
+        logger.error("Metrics extractor missing columns: %s", missing)
+        return None
+    out = df[RISK_FEATURE_COLUMNS].copy()
+    out.replace([np.inf, -np.inf], np.nan, inplace=True)
+    out.fillna(0, inplace=True)
+    return out
+
+
+def extract_code_metrics_radon(code_string: str) -> pd.DataFrame | None:
+    """Radon-based JM1-aligned features (Python source only)."""
     try:
-        # 1. חילוץ מדדים בסיסיים
         raw_metrics = analyze(code_string)
-        loc = raw_metrics.lloc 
+        loc = raw_metrics.lloc
 
         v_visitor = cc_visit(code_string)
         vg_list = [obj.complexity for obj in v_visitor]
@@ -52,37 +76,73 @@ def extract_code_metrics(code_string):
         d = halstead.total.difficulty
         e = halstead.total.effort
 
-        # 2. Feature Engineering (חובה - לפי ה-Notebook שלך)
         complexity_density = vg / max(loc, 1)
         volume_per_line = v / max(loc, 1)
 
-        # 3. בניית ה-DataFrame בסדר המדויק של התמונה
-        columns = ['loc', 'v(g)', 'v', 'd', 'e', 'complexity_density', 'volume_per_line']
         data = [[loc, vg, v, d, e, complexity_density, volume_per_line]]
-        
-        df = pd.DataFrame(data, columns=columns)
+        df = pd.DataFrame(data, columns=RISK_FEATURE_COLUMNS)
 
-        # 4. ניקוי נתונים
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
         df.fillna(0, inplace=True)
-        
+
         if not df.empty:
-            # יצירת הטבלה כמחרוזת
-            table_output = tabulate(df, headers='keys', tablefmt='psql', showindex=False)
-            logger.debug("Feature breakdown:\n%s", table_output)
-        else:
-            logger.warning("DataFrame is empty, nothing to log")
+            table_output = tabulate(df, headers="keys", tablefmt="psql", showindex=False)
+            logger.debug("Feature breakdown (Radon):\n%s", table_output)
 
         return df
 
     except Exception as error:
-        logger.error("Error in metric extraction: %s", error)
+        logger.error("Radon metric extraction failed: %s", error)
         return None
 
 
-def predict_risk(file_content):
+def extract_code_metrics(code_string: str, repo_path: str | None = None) -> pd.DataFrame | None:
+    """
+    JM1-aligned feature vector for predict_risk.
+    BYOR extractor (env or .arts/metrics.py), else Radon when REPO_LANGUAGE is python.
+    """
+    from shared.repo_language import is_python_pipeline
+    from utils.metrics_loader import resolve_metrics_extractor
+
+    extractor = resolve_metrics_extractor(repo_path)
+    if extractor is not None:
+        try:
+            raw = extractor(code_string)
+            if isinstance(raw, pd.DataFrame):
+                return _normalize_metrics_dataframe(raw)
+            if isinstance(raw, dict):
+                row = {k: raw.get(k, 0) for k in RISK_FEATURE_COLUMNS}
+                return _normalize_metrics_dataframe(pd.DataFrame([row]))
+            logger.error("Metrics extractor returned unsupported type: %s", type(raw))
+            return None
+        except Exception as error:
+            logger.error("BYOR metrics extractor failed: %s", error)
+            return None
+
+    if is_python_pipeline():
+        return extract_code_metrics_radon(code_string)
+
+    logger.warning(
+        "No metrics extractor for non-Python REPO_LANGUAGE. "
+        "Set ARTS_METRICS_EXTRACTOR or add REPO_PATH/.arts/metrics.py"
+    )
+    return None
+
+
+def predict_risk(file_content, repo_path: str | None = None):
     model, scaler = load_ml_assets()
-    features_df = extract_code_metrics(file_content)
+    features_df = extract_code_metrics(file_content, repo_path=repo_path)
+    if features_df is None:
+        return 1.0, [
+            (
+                "metrics_extractor",
+                {
+                    "importance": 1.0,
+                    "value": 0.0,
+                },
+            )
+        ]
+
     scaled_features = scaler.transform(features_df)
 
     probability = model.predict_proba(scaled_features)[:, 1][0]

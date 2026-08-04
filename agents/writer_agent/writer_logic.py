@@ -6,10 +6,17 @@ import logging
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langgraph.graph.state import RunnableConfig
 
-from agents.writer_agent.prompts import REPAIR_PROMPT_TEMPLATE, WRITER_PROMPT_TEMPLATE
 from graph.state import AgentState
-from shared.constants import MOCK_TOOL, TEST_FRAMEWORK
+from shared.constants import MOCK_TOOL
 from shared.logging_rules import SHARED_LOGGING_RULES
+from shared.repo_language import (
+    effective_repo_language,
+    get_repair_prompt_template,
+    get_writer_prompt_template,
+    is_python_pipeline,
+    resolve_test_framework,
+    writer_import_path_section,
+)
 from utils.failure_analyzer import analyze_test_failure
 from utils.log_format import log_tail
 from utils.utils import count_test_cases_from_list, get_import_path, get_test_path
@@ -93,21 +100,35 @@ def build_repair_messages(ctx: WriterContext, state: AgentState) -> tuple[System
         ctx.import_path,
         len(last_logs or ""),
     )
-    targeted_fix_instruction = analyze_test_failure(
-        last_logs, ctx.root_package, ctx.import_path
-    )
+    if is_python_pipeline():
+        targeted_fix_instruction = analyze_test_failure(
+            last_logs, ctx.root_package, ctx.import_path
+        )
+    else:
+        targeted_fix_instruction = (
+            "Fix the test using the runner output above and patterns from golden seeds."
+        )
     logger.debug(
         "build_repair_messages targeted_fix_instruction preview: %s",
         log_tail(targeted_fix_instruction, max_chars=500, max_lines=15),
     )
 
-    system_prompt = REPAIR_PROMPT_TEMPLATE.format(
-        test_file_path=ctx.test_file_path,
-        last_logs=last_logs,
-        targeted_fix_instruction=targeted_fix_instruction,
-        root_package=ctx.root_package,
-        logging_rules=SHARED_LOGGING_RULES,
-    )
+    template = get_repair_prompt_template()
+    if is_python_pipeline():
+        system_prompt = template.format(
+            test_file_path=ctx.test_file_path,
+            last_logs=last_logs,
+            targeted_fix_instruction=targeted_fix_instruction,
+            root_package=ctx.root_package,
+            logging_rules=SHARED_LOGGING_RULES,
+        )
+    else:
+        system_prompt = template.format(
+            test_file_path=ctx.test_file_path,
+            last_logs=last_logs,
+            targeted_fix_instruction=targeted_fix_instruction,
+            logging_rules=SHARED_LOGGING_RULES,
+        )
     system_msg = SystemMessage(content=system_prompt)
     instruction = (
         f"🚨 TEST FAILED.\n"
@@ -140,34 +161,59 @@ def build_generate_messages(ctx: WriterContext, state: AgentState) -> tuple[Syst
     )
     logger.debug("build_generate_messages golden_test_summary preview: %s", log_tail(golden_test_summary, max_chars=400, max_lines=10))
 
-    full_prompt = WRITER_PROMPT_TEMPLATE.format(
-        repo_path=ctx.repo_path,
-        target_file=ctx.target_file,
-        test_file_path=ctx.test_file_path,
-        plan=plan_text,
-        framework=TEST_FRAMEWORK,
-        mock_tool=MOCK_TOOL,
-        import_path=ctx.import_path,
-        tc_count=tc_count,
-        golden_examples=golden_test_summary,
-        architecture_summary=architecture_summary,
-        logging_rules=SHARED_LOGGING_RULES,
-    )
+    template = get_writer_prompt_template()
+    if is_python_pipeline():
+        full_prompt = template.format(
+            repo_path=ctx.repo_path,
+            target_file=ctx.target_file,
+            test_file_path=ctx.test_file_path,
+            plan=plan_text,
+            framework=resolve_test_framework(),
+            mock_tool=MOCK_TOOL,
+            import_path=ctx.import_path,
+            tc_count=tc_count,
+            golden_examples=golden_test_summary,
+            architecture_summary=architecture_summary,
+            logging_rules=SHARED_LOGGING_RULES,
+        )
+        case_label = "Pytest functions"
+    else:
+        full_prompt = template.format(
+            repo_language=effective_repo_language(),
+            target_file=ctx.target_file,
+            test_file_path=ctx.test_file_path,
+            plan=plan_text,
+            test_framework=resolve_test_framework(),
+            tc_count=tc_count,
+            golden_examples=golden_test_summary,
+            architecture_summary=architecture_summary,
+            logging_rules=SHARED_LOGGING_RULES,
+            import_path_section=writer_import_path_section(ctx.import_path),
+        )
+        case_label = "test cases"
 
     system_msg = SystemMessage(
         content=full_prompt + f"\n\nCRITICAL: Implement ALL {tc_count} cases identified."
     )
-    instruction = (
-        f"I see the source code. STOP REASONING NOW.\n"
-        f"TASK: Implement the Approved Test Plan based on the ACTUAL source code provided.\n\n"
-        f"STRICT RULES (CRITICAL):\n"
-        f"1. **SOURCE FIDELITY**: Do not assume logic that doesn't exist. ONLY assert calls visible in the source code.\n"
-        f"2. **EXCEPTION REALISM**: Observe how the source handles errors. Match try/except logic exactly.\n"
-        f"3. **IMPORT & PATCHING SAFETY**: Follow the MANDATORY BOILERPLATE ORDER defined in the system prompt. Never put the target file `{ctx.import_path}` or global pip libraries like `requests` into `sys.modules`.\n"
-        f"4. **SMART PATCHING**: For globally imported pip libraries, patch at the root: `mocker.patch('requests.get')`.\n"
-        f"5. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone Pytest functions.\n"
-        f"6. **EXECUTION**: IMMEDIATELY call `write_local_file` with complete code to: {ctx.test_file_path}.\n"
-    )
+    if is_python_pipeline():
+        instruction = (
+            f"I see the source code. STOP REASONING NOW.\n"
+            f"TASK: Implement the Approved Test Plan based on the ACTUAL source code provided.\n\n"
+            f"STRICT RULES (CRITICAL):\n"
+            f"1. **SOURCE FIDELITY**: Do not assume logic that doesn't exist. ONLY assert calls visible in the source code.\n"
+            f"2. **EXCEPTION REALISM**: Observe how the source handles errors. Match try/except logic exactly.\n"
+            f"3. **IMPORT & PATCHING SAFETY**: Follow the MANDATORY BOILERPLATE ORDER defined in the system prompt. Never put the target file `{ctx.import_path}` or global pip libraries like `requests` into `sys.modules`.\n"
+            f"4. **SMART PATCHING**: For globally imported pip libraries, patch at the root: `mocker.patch('requests.get')`.\n"
+            f"5. **EXACT COUNT**: Implement EXACTLY {tc_count} standalone Pytest functions.\n"
+            f"6. **EXECUTION**: IMMEDIATELY call `write_local_file` with complete code to: {ctx.test_file_path}.\n"
+        )
+    else:
+        instruction = (
+            f"I see the source code. Implement the Approved Test Plan.\n"
+            f"Use {resolve_test_framework()} patterns from golden seeds.\n"
+            f"Implement EXACTLY {tc_count} {case_label}.\n"
+            f"IMMEDIATELY call `write_local_file` with complete code to: {ctx.test_file_path}.\n"
+        )
     logger.debug(
         "build_generate_messages full_prompt_len=%s instruction_len=%s",
         len(full_prompt) + len(f"\n\nCRITICAL: Implement ALL {tc_count} cases identified."),

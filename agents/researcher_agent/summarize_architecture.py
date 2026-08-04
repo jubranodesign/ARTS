@@ -4,7 +4,7 @@ import re
 from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
 from langgraph.graph.state import RunnableConfig
 
-from agents.researcher_agent.prompts import ARCHITECT_SUMMARY_PROMPT
+from shared.repo_language import get_architect_summary_prompt_template
 from graph.state import AgentState
 from shared.config import setup_node_llm
 from utils.utils import (
@@ -48,7 +48,7 @@ def summarize_architecture(state: AgentState, config: RunnableConfig):
         test_chunks_formatted = f"--- REFERENCE TEST CHUNKS ---\n{raw_test_chunks}"
         logger.debug("test_chunks: %s", test_chunks_formatted)
         
-        summary_instr = ARCHITECT_SUMMARY_PROMPT.format(
+        summary_instr = get_architect_summary_prompt_template().format(
             test_chunks=test_chunks_formatted,
             user_task=user_task,
         )

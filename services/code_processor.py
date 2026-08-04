@@ -1,11 +1,11 @@
 import logging
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from shared.ingestion_prompts import CHUNK_SUMMARY_PROMPT
 from shared.llm_factory import get_model
 from shared.repo_language import (
     effective_repo_language,
     effective_splitter_language_id,
+    get_chunk_summary_prompt,
     get_splitter_kwargs,
     resolve_repo_language,
 )
@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class CodeProcessor:
-    def __init__(self, provider: str = "groq", summary_prompt=CHUNK_SUMMARY_PROMPT):
+    def __init__(self, provider: str = "groq", summary_prompt=None):
+        if summary_prompt is None:
+            summary_prompt = get_chunk_summary_prompt()
         requested = resolve_repo_language()
         self.splitter = RecursiveCharacterTextSplitter.from_language(
             **get_splitter_kwargs(requested),

@@ -36,22 +36,31 @@ def get_repo_seed_path(repo_path: str | None = None) -> str:
 # --- Repo-relative paths (parsing, tests layout, safe join under REPO_PATH) ---
 
 
-def extract_python_path(text: str) -> str:
+def extract_target_file_path(text: str) -> str:
     """
-    Extract the first Python file path in a string.
-    Supports paths like: 'service/api.py', './tests/test_x.py', 'main.py'
+    Extract the first source file path in a string for the active REPO_LANGUAGE extensions.
     """
-    if not text:
-        return "unknown_file.py"
+    from shared.repo_language import get_ingest_code_extensions, unknown_target_file_placeholder
 
-    pattern = r"([\w\d/_.-]+\.py)"
-    match = re.search(pattern, text)
+    if not text:
+        return unknown_target_file_placeholder()
+
+    exts = get_ingest_code_extensions()
+    ext_alts = "|".join(
+        re.escape(e.lstrip(".")) for e in sorted(exts, key=len, reverse=True)
+    )
+    pattern = rf"([\w\d/_.$-]+\.(?:{ext_alts}))"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
 
     if match:
-        path = match.group(1)
-        return path.strip().lstrip("./")
+        return match.group(1).strip().lstrip("./")
 
-    return "unknown_file.py"
+    return unknown_target_file_placeholder()
+
+
+def extract_python_path(text: str) -> str:
+    """Backward-compatible alias for extract_target_file_path."""
+    return extract_target_file_path(text)
 
 
 def normalize_relative_path(path: str, *, lowercase: bool = False) -> str:
@@ -74,23 +83,38 @@ def get_safe_full_path(base_path: str, relative_path: str) -> str:
 
 def get_test_path(target_file: str) -> str:
     """
-    Map a source file to a conventional test path.
-    Example: scraper/api.py -> tests/scraper/test_api.py
+    Map a source file to a conventional test path for REPO_LANGUAGE.
+    Python: tests/.../test_<file>.py — others: tests/.../<stem>.test<ext> or test_<stem><ext>.
     """
-    clean_path = normalize_relative_path(target_file)
+    from shared.repo_language import effective_splitter_language_id
 
+    clean_path = normalize_relative_path(target_file)
     parts = clean_path.split("/")
     folder = "/".join(parts[:-1])
     filename = parts[-1]
+    lang_id = effective_splitter_language_id()
+
+    if lang_id == "python":
+        if folder:
+            return f"tests/{folder}/test_{filename}"
+        return f"tests/test_{filename}"
+
+    stem, ext = os.path.splitext(filename)
+    if lang_id in ("js", "ts"):
+        test_filename = f"{stem}.test{ext}"
+    else:
+        test_filename = f"test_{stem}{ext}"
 
     if folder:
-        return f"tests/{folder}/test_{filename}"
-    return f"tests/test_{filename}"
+        return f"tests/{folder}/{test_filename}"
+    return f"tests/{test_filename}"
 
 
 def get_import_path(target_file: str) -> str:
-    """Map file path to Python import path (e.g. pkg/module.py -> pkg.module)."""
-    if not target_file:
+    """Map file path to Python import path; empty for non-Python pipeline."""
+    from shared.repo_language import is_python_pipeline
+
+    if not target_file or not is_python_pipeline():
         return ""
 
     path_without_ext = os.path.splitext(normalize_relative_path(target_file))[0]

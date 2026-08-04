@@ -3,7 +3,7 @@ import logging
 from langchain_core.messages import SystemMessage
 from langgraph.graph.state import RunnableConfig
 
-from agents.designer_agent.prompts import DESIGNER_PROMPT_TEMPLATE
+from shared.repo_language import get_designer_prompt_template
 from agents.shared.agent_tools import AGENT_TOOLS
 from graph.state import AgentState
 from shared.config import setup_node_llm
@@ -24,7 +24,7 @@ def call_designer(state: AgentState, config: RunnableConfig):
     target_file = state.get("target_file") 
 
     # 3. בניית ה-System Message (ה-Prompt המועשר)
-    enriched_prompt_content = DESIGNER_PROMPT_TEMPLATE.format(
+    enriched_prompt_content = get_designer_prompt_template().format(
         architecture_summary=architecture_summary,
         golden_examples=golden_test_summary,
         user_input=user_input,
