@@ -81,6 +81,14 @@ def get_safe_full_path(base_path: str, relative_path: str) -> str:
     return os.path.normpath(full_path)
 
 
+def get_source_service_dir(repo_path: str, target_file: str) -> str:
+    """Absolute directory containing target_file under repo_path (e.g. for PYTHONPATH)."""
+    full_target = get_safe_full_path(repo_path, target_file)
+    if not full_target:
+        return ""
+    return os.path.abspath(os.path.dirname(full_target))
+
+
 def get_test_path(target_file: str) -> str:
     """
     Map a source file to a conventional test path for REPO_LANGUAGE.

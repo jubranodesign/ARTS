@@ -4,7 +4,7 @@ import os
 from langgraph.graph.state import RunnableConfig
 
 from graph.state import AgentState
-from shared.paths import get_safe_full_path
+from shared.paths import get_safe_full_path, get_source_service_dir
 from shared.repo_language import is_python_pipeline
 from utils.testing import run_tests
 
@@ -26,14 +26,14 @@ def call_executor(state: AgentState, config: RunnableConfig):
     env = os.environ.copy()
 
     if is_python_pipeline() and target_file:
-        source_service_dir = os.path.dirname(target_file)
-        full_service_path = os.path.abspath(os.path.join(repo_path, source_service_dir))
-        path_separator = ";" if os.name == "nt" else ":"
-        env["PYTHONPATH"] = (
-            f"{repo_path}{path_separator}{full_service_path}"
-            f"{path_separator}{env.get('PYTHONPATH', '')}"
-        )
-        logger.info("Injected PYTHONPATH entry: %s", full_service_path)
+        full_service_path = get_source_service_dir(repo_path, target_file)
+        if full_service_path:
+            path_separator = ";" if os.name == "nt" else ":"
+            env["PYTHONPATH"] = (
+                f"{repo_path}{path_separator}{full_service_path}"
+                f"{path_separator}{env.get('PYTHONPATH', '')}"
+            )
+            logger.info("Injected PYTHONPATH entry: %s", full_service_path)
 
     full_test_file_path = get_safe_full_path(repo_path, test_file_path)
     logger.info("Test file full path: %s", full_test_file_path)
