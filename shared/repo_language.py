@@ -104,23 +104,28 @@ def is_splitter_language_supported(name: str) -> bool:
     return False
 
 
-def effective_splitter_language_id() -> str:
-    """Language id used for RecursiveCharacterTextSplitter.from_language."""
-    requested = resolve_repo_language()
+def resolve_splitter_language(name: str | None = None) -> Language:
+    """Map a language name to a splitter Language, falling back to Python."""
+    requested = resolve_repo_language() if name is None else name
     lang = repo_language_to_splitter_language(requested)
     if lang is not None:
-        return lang.name.lower()
+        return lang
     logger.warning(
-        "REPO_LANGUAGE=%r is not a known Language splitter id; using %r.",
+        "Language %r is not a known splitter id; using %r.",
         requested,
         DEFAULT_REPO_LANGUAGE,
     )
-    return DEFAULT_REPO_LANGUAGE
+    fallback = repo_language_to_splitter_language(DEFAULT_REPO_LANGUAGE)
+    if fallback is None:
+        raise ValueError(
+            f"DEFAULT_REPO_LANGUAGE={DEFAULT_REPO_LANGUAGE!r} is not a known splitter id."
+        )
+    return fallback
 
 
-def effective_repo_language() -> str:
-    """Language id for pipeline paths, prompts, and ingest (matches splitter id)."""
-    return effective_splitter_language_id()
+def effective_splitter_language_id() -> str:
+    """Language id used for RecursiveCharacterTextSplitter.from_language."""
+    return resolve_splitter_language().name.lower()
 
 
 def is_python_pipeline() -> bool:
@@ -211,16 +216,8 @@ def writer_import_path_section(import_path: str) -> str:
 
 def get_splitter_kwargs(language: str | None = None) -> dict:
     """Arguments for RecursiveCharacterTextSplitter.from_language."""
-    requested = language if language is not None else resolve_repo_language()
-    lang_enum = repo_language_to_splitter_language(requested)
-    if lang_enum is None:
-        logger.warning(
-            "No Language mapping for REPO_LANGUAGE=%r; using python splitter.",
-            requested,
-        )
-        lang_enum = Language.PYTHON
     return {
-        "language": lang_enum,
+        "language": resolve_splitter_language(language),
         "chunk_size": DEFAULT_CHUNK_SIZE,
         "chunk_overlap": DEFAULT_CHUNK_OVERLAP,
     }

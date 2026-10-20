@@ -10,7 +10,7 @@ from graph.state import AgentState
 from shared.constants import MOCK_TOOL
 from shared.logging_rules import SHARED_LOGGING_RULES
 from shared.repo_language import (
-    effective_repo_language,
+    effective_splitter_language_id,
     get_repair_prompt_template,
     get_writer_prompt_template,
     is_python_pipeline,
@@ -179,7 +179,7 @@ def build_generate_messages(ctx: WriterContext, state: AgentState) -> tuple[Syst
         case_label = "Pytest functions"
     else:
         full_prompt = template.format(
-            repo_language=effective_repo_language(),
+            repo_language=effective_splitter_language_id(),
             target_file=ctx.target_file,
             test_file_path=ctx.test_file_path,
             plan=plan_text,
