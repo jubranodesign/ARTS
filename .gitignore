@@ -41,3 +41,6 @@ models/
 
 # Ignore python pickle file artifacts
 *.pkl
+
+# Session notes
+docs/sessions/
