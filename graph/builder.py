@@ -9,7 +9,7 @@ from agents.designer_agent.final_cleaner_designer import final_cleaner_designer
 from agents.designer_agent.call_designer import call_designer
 from agents.executor_agent.save_test_node import save_test_node
 from agents.executor_agent.call_executor import call_executor
-from agents.researcher_agent.wait_for_task import wait_for_task
+from agents.wait_for_task import wait_for_task
 from agents.shared.agent_tools import AGENT_TOOLS
 from agents.writer_agent.final_cleaner_writer import final_cleaner_writer
 from agents.writer_agent.call_writer import call_writer
