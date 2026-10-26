@@ -143,6 +143,23 @@ def run_both_ingestion(
     run_ingestion_for_repo(vdb, IngestMode.SOURCE, repo_root=repo_root, provider=provider)
 
 
+def run_ingestion_mode(
+    vdb: VectorDBService,
+    mode: str,
+    repo_root: str | None = None,
+    provider: str | None = None,
+) -> None:
+    """Run ingest for mode: both, seed, or source."""
+    if mode == "both":
+        run_both_ingestion(vdb, repo_root=repo_root, provider=provider)
+    elif mode == "seed":
+        run_ingestion_for_repo(vdb, IngestMode.SEED, repo_root=repo_root, provider=provider)
+    elif mode == "source":
+        run_ingestion_for_repo(vdb, IngestMode.SOURCE, repo_root=repo_root, provider=provider)
+    else:
+        raise ValueError(f"Unknown ingest mode: {mode!r}")
+
+
 if __name__ == "__main__":
     from shared.logging_config import configure_logging
     from shared.repo_cli import add_repo_path_argument, resolve_repo_path
@@ -168,8 +185,9 @@ if __name__ == "__main__":
 
     vdb = VectorDBService()
     if args.both:
-        run_both_ingestion(vdb, repo_root=repo_root)
+        mode = "both"
     elif args.full:
-        run_ingestion_for_repo(vdb, IngestMode.SOURCE, repo_root=repo_root)
+        mode = "source"
     else:
-        run_ingestion_for_repo(vdb, IngestMode.SEED, repo_root=repo_root)
+        mode = "seed"
+    run_ingestion_mode(vdb, mode, repo_root=repo_root)

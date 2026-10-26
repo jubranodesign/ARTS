@@ -257,16 +257,9 @@ def run_ingest_only(
     vdb: VectorDBService,
 ) -> None:
     """Ingest seed/source/both into Chroma (+ BM25 on source). No graph run."""
-    from ingest import IngestMode, run_both_ingestion, run_ingestion_for_repo
+    from ingest import run_ingestion_mode
 
-    if ingest == "both":
-        run_both_ingestion(vdb, repo_root=repo_path)
-    elif ingest == "seed":
-        run_ingestion_for_repo(vdb, IngestMode.SEED, repo_root=repo_path)
-    elif ingest == "source":
-        run_ingestion_for_repo(vdb, IngestMode.SOURCE, repo_root=repo_path)
-    else:
-        raise ValueError(f"Unknown ingest mode: {ingest!r}")
+    run_ingestion_mode(vdb, ingest, repo_root=repo_path)
 
 
 def run_agent_only(

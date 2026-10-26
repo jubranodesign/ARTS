@@ -27,14 +27,3 @@ def write_repo_text(repo_path: str, relative_path: str, content: str) -> str:
     with open(full_path, "w", encoding="utf-8") as f:
         f.write(content)
     return full_path
-
-
-def read_repo_text_tool_response(repo_path: str, relative_path: str) -> str:
-    full_path = resolve_repo_file(repo_path, relative_path)
-    if not os.path.exists(full_path):
-        return (
-            f"Error: File not found. Tried to access: {full_path}. "
-            "Ensure your path is relative to the project root."
-        )
-    content = read_repo_text(repo_path, relative_path)
-    return f"SUCCESS: File read from absolute path: {full_path}\n{content}"

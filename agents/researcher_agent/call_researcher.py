@@ -6,7 +6,7 @@ from agents.researcher_agent.tools import RESEARCHER_TOOLS
 from graph.state import AgentState
 from shared.config import setup_node_llm
 from shared.paths import extract_target_file_path
-from utils.repo_files import read_repo_text_tool_response
+from utils.repo_files import read_repo_text
 from utils.messages import TRIM_TOKENS_RESEARCHER, prepare_chat_history
 from utils.state import format_risk_context
 
@@ -30,7 +30,12 @@ def call_researcher(state: AgentState, config: RunnableConfig):
     if not target_file_content:
         if target_file:
             repo_path = config["configurable"]["repo_path"]
-            target_file_content = read_repo_text_tool_response(repo_path, target_file)
+            try:
+                target_file_content = read_repo_text(repo_path, target_file)
+            except FileNotFoundError:
+                target_file_content = f"Error: target file not found: {target_file}"
+            except OSError as e:
+                target_file_content = f"Error reading file: {e}"
         else:
             target_file_content = "No target file path detected."
 

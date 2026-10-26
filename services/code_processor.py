@@ -3,8 +3,6 @@ import logging
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from shared.llm_factory import get_model
 from shared.repo_language import (
-    effective_repo_language,
-    effective_splitter_language_id,
     get_chunk_summary_prompt,
     get_splitter_kwargs,
     resolve_repo_language,
@@ -21,14 +19,14 @@ class CodeProcessor:
         if provider is None:
             provider = get_ingest_model_provider()
         requested = resolve_repo_language()
-        self.splitter = RecursiveCharacterTextSplitter.from_language(
-            **get_splitter_kwargs(requested),
-        )
+        splitter_kwargs = get_splitter_kwargs()
+        self.splitter = RecursiveCharacterTextSplitter.from_language(**splitter_kwargs)
+        effective = splitter_kwargs["language"].name.lower()
         logger.info(
             "CodeProcessor splitter=%s REPO_LANGUAGE=%r pipeline_effective=%s",
-            effective_splitter_language_id(),
+            effective,
             requested,
-            effective_repo_language(),
+            effective,
         )
         logger.info("CodeProcessor initializing LLM for ingestion using provider: %s", provider)
         self.llm = get_model(provider=provider, temperature=0)
